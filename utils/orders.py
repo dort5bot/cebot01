@@ -1,6 +1,5 @@
-# ✅ MegaBot Final - utils/orders.py
+# #2#✅ MegaBot Final - utils/orders.py
 # Emir yönetim sistemi: /al /sat /stop komutları için
-
 import os
 import csv
 from datetime import datetime
@@ -103,3 +102,27 @@ def close_order_by_stop(user_id, symbol, amount, stop_percent):
         return f"🛑 Stop-loss işlemi uygulandı: {symbol} {amount} adet (Fiyat {price})"
     else:
         return "ℹ️ Zarar seviyesine ulaşan emir bulunamadı."
+
+
+def list_active_orders(user_id):
+    file_path = get_order_file(user_id)
+    if not os.path.exists(file_path):
+        return "🔎 Açık emir bulunamadı."
+
+    result = "📋 Açık Emirler:\n"
+    with open(file_path, newline="") as f:
+        reader = csv.DictReader(f)
+        orders = list(reader)
+
+        if not orders:
+            return "🔎 Açık emir bulunamadı."
+
+        for row in orders:
+            result += (
+                f"• Coin: {row['symbol']} | Miktar: {row['amount']}\n"
+                f"  Giriş: {row['entry']} | Hedef: {row['target']} | Stop: {row['stop']}\n"
+                f"  📅 {row['datetime']}\n"
+                "------------------------\n"
+            )
+
+    return result
