@@ -1,10 +1,4 @@
-# ==2,3====================================
-# ✅ MegaBot Final - main.py
-# Ana bot başlatma, komut kayıtları, JobQueue görevleri
-# ======================================
-
-# main.py
-
+#main 4
 import os
 import logging
 from dotenv import load_dotenv
@@ -46,7 +40,6 @@ from handlers.aktif_handler import get_handler as aktif_handler
 from handlers.raporum_handler import get_handler as raporum_handler
 from handlers.apikey_handler import get_handler as apikey_handler
 
-# Komutları kaydet
 application.add_handler(ap_handler())
 application.add_handler(io_handler())
 application.add_handler(nls_handler())
@@ -66,8 +59,14 @@ application.add_handler(apikey_handler())
 from jobs.check_orders import schedule_order_check
 from jobs.fr_scheduler import schedule_fr_check
 
-schedule_order_check(application)      # ✅ sadece application gönder
-schedule_fr_check(application)         # ✅ aynı şekilde
+# schedule_order_check fonksiyonuna job_queue nesnesi gönderilmeli
+schedule_order_check(application.job_queue)
+
+# schedule_fr_check fonksiyonuna application + user_id + coin gönderilmeli
+USER_ID = 123456789  # Telegram kullanıcı ID'si int tipinde (değiştir)
+COIN = "BTC"         # Coin sembolü, örn: "BTC"
+
+schedule_fr_check(application, USER_ID, COIN)
 
 # ===============================
 # ✅ Uyanık Kalma
