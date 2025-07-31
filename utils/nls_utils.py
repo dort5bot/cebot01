@@ -3,7 +3,7 @@
 # /nls komutu - Net Likidite Skoru hesaplama
 # ======================================
 
-from .binance_api import get_order_book
+from .binance_api import get_order_book as get_orderbook
 
 def calculate_nls(symbol):
     ob = get_orderbook(symbol)
