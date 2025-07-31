@@ -1,25 +1,17 @@
 ##2
 #fr_scheduler.py
-#
-import requests
+#hatali olabilir 
 
-def get_fund_report(symbol):
+from telegram.ext import ContextTypes
+from utils.fr_utils import get_fund_report
+
+async def fr_scheduler_job(context: ContextTypes.DEFAULT_TYPE):
+    job_data = context.job.data
+    user_id = job_data["user_id"]
+    coin = job_data["coin"]
+
     try:
-        url = f"https://fapi.binance.com/futures/data/fundingRate"
-        params = {
-            "symbol": symbol.upper(),
-            "limit": 7
-        }
-        response = requests.get(url, params=params)
-        response.raise_for_status()
-        data = response.json()
-
-        report_lines = []
-        for entry in data:
-            time_str = entry["fundingTime"]
-            rate = float(entry["fundingRate"]) * 100
-            report_lines.append(f"{time_str}: {rate:.4f}%")
-
-        return "\n".join(report_lines)
+        report = get_fund_report(coin)
+        await context.bot.send_message(chat_id=user_id, text=f"📊 Haftalık Fon Raporu ({coin}):\n\n{report}")
     except Exception as e:
-        return f"Rapor alınamadı: {e}"
+        await context.bot.send_message(chat_id=user_id, text=f"⚠️ Rapor alınamadı: {e}")
