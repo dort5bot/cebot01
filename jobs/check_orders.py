@@ -3,7 +3,7 @@
 import logging
 from utils.data import load_orders, save_orders
 from utils.binance_api import get_current_price
-from telegram.ext import ContextTypes, Application
+from telegram.ext import ContextTypes, JobQueue
 
 logger = logging.getLogger(__name__)
 
@@ -47,9 +47,9 @@ async def check_orders_job(context: ContextTypes.DEFAULT_TYPE):
             except Exception as e:
                 logger.warning(f"Mesaj gönderilemedi ({user_id}): {e}")
 
-def schedule_order_check(application: Application):
-    application.job_queue.run_repeating(
+def schedule_order_check(job_queue: JobQueue):
+    job_queue.run_repeating(
         check_orders_job,
-        interval=60,   # her 60 saniyede bir çalışır
-        first=10       # bot başladıktan 10 saniye sonra ilk çalıştırma
+        interval=60,  # her 60 saniyede bir çalışır
+        first=10      # bot başladıktan 10 saniye sonra ilk çalıştırma
     )
