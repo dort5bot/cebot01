@@ -1,5 +1,4 @@
-# 3 jobs/fr_scheduler.py
-
+#3 fr_scheduler.py
 from telegram.ext import ContextTypes, Application
 from utils.fr_utils import get_fund_report
 
