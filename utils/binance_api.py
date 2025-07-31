@@ -1,4 +1,4 @@
-# ==2>3>4-5====================================
+# ==2>3>4-5,6====================================
 # 📈 MegaBot Final - utils/binance_api.py
 # Binance API işlemleri: fiyat alma, veri çekme
 # ======================================
@@ -13,6 +13,10 @@ def get_price(symbol):
         return float(response.json()["price"])
     except Exception:
         return None
+
+# 🔧 get_current_price eklendi (get_price ile aynı işlemi yapar)
+def get_current_price(symbol):
+    return get_price(symbol)
 
 def get_order_book(symbol, limit=10):
     try:
