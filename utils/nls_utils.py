@@ -1,8 +1,8 @@
-
-# ======================================
+# ==2====================================
 # ✅ MegaBot Final - utils/nls_utils.py
 # /nls komutu - Net Likidite Skoru hesaplama
 # ======================================
+
 from .binance_api import get_orderbook
 
 def calculate_nls(symbol):
@@ -12,3 +12,22 @@ def calculate_nls(symbol):
     net = buy - sell
     score = round(net / (buy + sell + 1e-9) * 100, 2)
     return {"nls_score": score, "buy_value": buy, "sell_value": sell}
+
+def analyze_nls(symbol):
+    result = calculate_nls(symbol)
+    score = result["nls_score"]
+
+    if score > 20:
+        trend = "AL"
+    elif score < -20:
+        trend = "SAT"
+    else:
+        trend = "NÖTR"
+
+    return {
+        "symbol": symbol,
+        "nls_score": score,
+        "buy_value": result["buy_value"],
+        "sell_value": result["sell_value"],
+        "trend": trend
+    }
