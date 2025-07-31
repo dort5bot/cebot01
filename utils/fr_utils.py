@@ -1,33 +1,29 @@
 
-# ==2====================================
+# ==2,3====================================
 # ✅ MegaBot Final - utils/fr_utils.py
 # /fr komutu - Fon Raporu
 # ======================================
-
-
 import requests
 
-def get_fr_info(symbol="BTCUSDT"):
-    url = f"https://fapi.binance.com/fapi/v1/fundingRate?symbol={symbol}&limit=7"
+def get_fund_report(symbol):
     try:
-        res = requests.get(url, timeout=10)
-        data = res.json()
+        url = f"https://fapi.binance.com/futures/data/fundingRate"
+        params = {
+            "symbol": symbol.upper(),
+            "limit": 7
+        }
+        response = requests.get(url, params=params)
+        response.raise_for_status()
+        data = response.json()
 
-        if not data or isinstance(data, dict) and "code" in data:
-            return "❌ Fonlama verisi alınamadı."
+        report_lines = []
+        for entry in data:
+            time_str = entry["fundingTime"]
+            rate = float(entry["fundingRate"]) * 100
+            report_lines.append(f"{time_str}: {rate:.4f}%")
 
-        rates = [float(i["fundingRate"]) * 100 for i in data]
-        avg_rate = round(sum(rates) / len(rates), 4)
-        last_rate = round(rates[-1], 4)
-
-        text = f"📈 {symbol} Fonlama Raporu (7 Günlük)\n"
-        text += f"• Ortalama: {avg_rate}%\n"
-        text += f"• Son Oran: {last_rate}%\n"
-        text += "• Günlük Oranlar:\n"
-        for i, rate in enumerate(rates, 1):
-            text += f"   - Gün {i}: {round(rate, 4)}%\n"
-
-        return text
-
+        return "\n".join(report_lines)
     except Exception as e:
-        return f"❌ Hata oluştu: {e}"
+        return f"Rapor alınamadı: {e}"
+
+
