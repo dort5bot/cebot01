@@ -1,11 +1,13 @@
-# #2#✅ MegaBot Final - utils/orders.py
-# Emir yönetim sistemi: /al /sat /stop komutları için
+# 3✅ MegaBot Final - utils/orders.py
+# Emir yönetim sistemi: /al /sat /stop /raporum komutları için
+
 import os
 import csv
 from datetime import datetime
 from utils.binance_api import get_price
 
 DATA_DIR = "data"
+
 
 def get_order_file(user_id):
     return os.path.join(DATA_DIR, f"{user_id}_orders.csv")
@@ -126,3 +128,26 @@ def list_active_orders(user_id):
             )
 
     return result
+
+
+def generate_report(user_id):
+    file_path = get_order_file(user_id)
+    if not os.path.exists(file_path):
+        return "🔎 Hiç işlem kaydı yok.", None
+
+    result = "📊 İşlem Raporu:\n"
+    with open(file_path, newline="") as f:
+        reader = csv.DictReader(f)
+        rows = list(reader)
+
+        if not rows:
+            return "🔎 Hiç işlem bulunamadı.", None
+
+        for row in rows:
+            result += (
+                f"• {row['symbol']} | Miktar: {row['amount']} | Giriş: {row['entry']} | 🎯 {row['target']} | 🛑 {row['stop']}\n"
+                f"  📅 {row['datetime']}\n"
+                "------------------------\n"
+            )
+
+    return result, file_path
