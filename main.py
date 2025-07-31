@@ -1,4 +1,4 @@
-# ======================================
+# ==2====================================
 # ✅ MegaBot Final - main.py
 # Ana bot başlatma, komut kayıtları, JobQueue görevleri
 # ======================================
@@ -6,10 +6,7 @@
 import os
 import logging
 from dotenv import load_dotenv
-from telegram.ext import (
-    ApplicationBuilder,
-    CommandHandler,
-)
+from telegram.ext import ApplicationBuilder
 
 # Gerekli başlatmalar
 from utils.init_files import init_data_files
@@ -28,47 +25,55 @@ logging.basicConfig(
     level=logging.INFO
 )
 
-# Uygulamayı oluştur
+# Uygulama başlat
 application = ApplicationBuilder().token(BOT_TOKEN).build()
 
-# Handler'lar
-from handlers.ap_handler import ap_command
-from handlers.io_handler import io_command
-from handlers.nls_handler import nls_command
-from handlers.npr_handler import npr_command
-from handlers.etf_handler import etf_command
-from handlers.fr_handler import fr_command
-from handlers.al_handler import al_command
-from handlers.sat_handler import sat_command
-from handlers.stop_handler import stop_command
-from handlers.aktif_handler import aktif_command
-from handlers.raporum_handler import raporum_command
-from handlers.apikey_handler import apikey_command
+# ===============================
+# ✅ Komut Handler Ekleme
+# ===============================
+from handlers.ap_handler import get_handler as ap_handler
+from handlers.io_handler import get_handler as io_handler
+from handlers.nls_handler import get_handler as nls_handler
+from handlers.npr_handler import get_handler as npr_handler
+from handlers.etf_handler import get_handler as etf_handler
+from handlers.fr_handler import get_handler as fr_handler
+from handlers.al_handler import get_handler as al_handler
+from handlers.sat_handler import get_handler as sat_handler
+from handlers.stop_handler import get_handler as stop_handler
+from handlers.aktif_handler import get_handler as aktif_handler
+from handlers.raporum_handler import get_handler as raporum_handler
+from handlers.apikey_handler import get_handler as apikey_handler
 
-# Komut kayıtları
-application.add_handler(CommandHandler("ap", ap_command))
-application.add_handler(CommandHandler("io", io_command))
-application.add_handler(CommandHandler("nls", nls_command))
-application.add_handler(CommandHandler("npr", npr_command))
-application.add_handler(CommandHandler("etf", etf_command))
-application.add_handler(CommandHandler("fr", fr_command))
-application.add_handler(CommandHandler("al", al_command))
-application.add_handler(CommandHandler("sat", sat_command))
-application.add_handler(CommandHandler("stop", stop_command))
-application.add_handler(CommandHandler("aktif", aktif_command))
-application.add_handler(CommandHandler("raporum", raporum_command))
-application.add_handler(CommandHandler("apikey", apikey_command))
+# Komutları kaydet
+application.add_handler(ap_handler())
+application.add_handler(io_handler())
+application.add_handler(nls_handler())
+application.add_handler(npr_handler())
+application.add_handler(etf_handler())
+application.add_handler(fr_handler())
+application.add_handler(al_handler())
+application.add_handler(sat_handler())
+application.add_handler(stop_handler())
+application.add_handler(aktif_handler())
+application.add_handler(raporum_handler())
+application.add_handler(apikey_handler())
 
-# Job kayıtları (örnek)
+# ===============================
+# ✅ JobQueue Görevleri
+# ===============================
 from jobs.check_orders import schedule_order_check
 from jobs.fr_scheduler import schedule_fr_check
 
 schedule_order_check(application.job_queue)
 schedule_fr_check(application.job_queue)
 
-# Render Free uyku koruma
+# ===============================
+# ✅ Uyanık Kalma
+# ===============================
 keep_alive()
 
-# Botu başlat
+# ===============================
+# ✅ Botu çalıştır
+# ===============================
 if __name__ == "__main__":
     application.run_polling()
