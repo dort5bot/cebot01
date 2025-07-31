@@ -1,8 +1,8 @@
-
-# ======================================
+# ==2====================================
 # ✅ MegaBot Final - utils/io_utils.py
 # /io komutu - Alış/Satış baskı oranları hesaplama
 # ======================================
+
 from .binance_api import get_orderbook
 
 def calculate_io(symbol):
@@ -15,4 +15,22 @@ def calculate_io(symbol):
     return {
         "buy_ratio": round(100 * bids / total, 2),
         "sell_ratio": round(100 * asks / total, 2)
+    }
+
+def get_io_analysis(symbol):
+    ratios = calculate_io(symbol)
+    buy_ratio = ratios["buy_ratio"]
+    sell_ratio = ratios["sell_ratio"]
+
+    trend = "NÖTR"
+    if buy_ratio > 60:
+        trend = "AL"
+    elif sell_ratio > 60:
+        trend = "SAT"
+
+    return {
+        "symbol": symbol,
+        "buy_ratio": buy_ratio,
+        "sell_ratio": sell_ratio,
+        "trend": trend
     }
