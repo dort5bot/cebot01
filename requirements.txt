@@ -1,0 +1,19 @@
+python-telegram-bot[job-queue,webhooks]==20.7
+python-dotenv==1.0.1
+requests==2.31.0
+aiohttp
+pandas
+numpy
+keep_alive  # Eğer özel ping sunucusu varsa (Render için genelde gerekmez)
+
+Flask==2.3.2
+python-binance==1.0.29
+pytz
+dateparser
+
+
+
+
+
+
+

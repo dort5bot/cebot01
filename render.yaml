@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: megabot
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: python main.py
+    autoDeploy: true
+# envVars: ← kaldırılabilir, .env dosyası zaten var diyorsak
+#   envVars:
+
