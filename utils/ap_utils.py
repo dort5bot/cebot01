@@ -1,38 +1,76 @@
-# ==2====================================
-# ✅ MegaBot Final - utils/ap_utils.py
-# /ap komutu - Altcoin Güç Endeksi hesaplama ve analiz üretimi
-# ======================================
-from .binance_api import get_price
+# ==3========
+# == ✅ MegaBot Final - utils/ap_utils.py ==
+# /ap komutu - Gelişmiş Altcoin Güç Endeksi Analizi
+# ===============================================
 
-def calculate_ap(symbols):
-    results = {}
-    for sym in symbols:
-        try:
-            price = get_price(sym)
-            results[sym] = price
-        except:
-            results[sym] = None
-    return results
+from .binance_api import get_price, get_klines
+import numpy as np
 
-def generate_ap_report(symbol, interval="1h"):
-    # Bu örnek analiz fonksiyonu basit bir yapıdadır.
-    # Daha gelişmiş hesaplamalar eklenebilir.
+def calculate_rsi(prices, period=14):
+    if len(prices) < period + 1:
+        return None
+    deltas = np.diff(prices)
+    seed = deltas[:period]
+    up = seed[seed > 0].sum() / period
+    down = -seed[seed < 0].sum() / period
+    rs = up / down if down != 0 else 0
+    rsi = 100 - (100 / (1 + rs))
+    return round(rsi, 2)
 
-    price = get_price(symbol)
-    if price is None:
+def calculate_trend(prices):
+    if len(prices) < 2:
+        return "yetersiz veri"
+    return "yukarı" if prices[-1] > prices[0] else "aşağı"
+
+def calculate_momentum(prices):
+    if len(prices) < 4:
+        return "yetersiz veri"
+    diff = prices[-1] - prices[-4]
+    return "güçlü" if diff > 0 else "zayıf"
+
+def detect_volume_spike(volumes):
+    if len(volumes) < 4:
+        return "yetersiz veri"
+    avg_vol = np.mean(volumes[:-1])
+    return "yüksek" if volumes[-1] > 1.5 * avg_vol else "normal"
+
+def generate_ap_report(symbol="BTCUSDT", interval="1h"):
+    try:
+        klines = get_klines(symbol, interval=interval, limit=100)
+        closes = [float(k[4]) for k in klines]
+        volumes = [float(k[5]) for k in klines]
+
+        if not closes or not volumes:
+            raise ValueError("Veri eksik")
+
+        price = closes[-1]
+        rsi = calculate_rsi(closes)
+        trend = calculate_trend(closes)
+        momentum = calculate_momentum(closes)
+        volume_status = detect_volume_spike(volumes)
+
+        recommendation = "AL"
+        if rsi and rsi > 70:
+            recommendation = "SAT"
+        elif rsi and rsi < 30:
+            recommendation = "AL"
+        elif trend == "aşağı":
+            recommendation = "BEKLE"
+
         return {
             "symbol": symbol,
             "interval": interval,
-            "error": "Veri alınamadı"
+            "price": round(price, 4),
+            "trend": trend,
+            "momentum": momentum,
+            "rsi": rsi,
+            "volume": volume_status,
+            "recommendation": recommendation
         }
 
-    analysis = {
-        "symbol": symbol,
-        "interval": interval,
-        "trend": "yukarı",  # örnek değer
-        "momentum": "güçlü",  # örnek değer
-        "volume": "yüksek",   # örnek değer
-        "recommendation": "AL",  # örnek değer
-        "price": price
-    }
-    return analysis
+    except Exception as e:
+        return {
+            "symbol": symbol,
+            "interval": interval,
+            "error": f"Veri çekilemedi: {str(e)}"
+        }
