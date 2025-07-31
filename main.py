@@ -1,7 +1,9 @@
-# ==2====================================
+# ==2,3====================================
 # ✅ MegaBot Final - main.py
 # Ana bot başlatma, komut kayıtları, JobQueue görevleri
 # ======================================
+
+# main.py
 
 import os
 import logging
@@ -64,8 +66,8 @@ application.add_handler(apikey_handler())
 from jobs.check_orders import schedule_order_check
 from jobs.fr_scheduler import schedule_fr_check
 
-schedule_order_check(application.job_queue)
-schedule_fr_check(application.job_queue)
+schedule_order_check(application)      # ✅ sadece application gönder
+schedule_fr_check(application)         # ✅ aynı şekilde
 
 # ===============================
 # ✅ Uyanık Kalma
