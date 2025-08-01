@@ -1,19 +1,24 @@
+# Telegram ve görev zamanlayıcı
 python-telegram-bot[job-queue,webhooks]==20.7
+
+# Ortam değişkenleri için
 python-dotenv==1.0.1
+
+# HTTP istekleri
 requests==2.31.0
 aiohttp
+
+# Veri işleme
 pandas
 numpy
-keep_alive  # Eğer özel ping sunucusu varsa (Render için genelde gerekmez)
 
-Flask==2.3.2
-python-binance==1.0.29
+# Zaman ve tarih işlemleri
 pytz
 dateparser
 
+# Binance API
+python-binance==1.0.29
 
-
-
-
-
-
+# (Render gibi ortamlarda ping için - gerekiyorsa)
+Flask==2.3.2
+keep_alive  # varsa özel keep-alive.py dosyanız
