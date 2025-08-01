@@ -26,7 +26,7 @@ application = ApplicationBuilder().token(BOT_TOKEN).build()
 
 ===============================
 
-✅ Komut Handler Ekleme
+###✅ Komut Handler Ekleme
 
 ===============================
 
@@ -36,7 +36,7 @@ application.add_handler(ap_handler()) application.add_handler(io_handler()) appl
 
 ===============================
 
-✅ JobQueue Görevleri
+###✅ JobQueue Görevleri
 
 ===============================
 
@@ -56,7 +56,7 @@ schedule_etf_daily(application.job_queue)
 
 ===============================
 
-✅ Uyanık Kalma
+###✅ Uyanık Kalma
 
 ===============================
 
@@ -64,7 +64,7 @@ keep_alive()
 
 ===============================
 
-✅ Botu çalıştır
+###✅ Botu çalıştır
 
 ===============================
 
