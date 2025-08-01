@@ -1,24 +1,14 @@
-# ===============================
-# ✅ Revize Edilmiş: etf_handler.py
-# Komut: /etf
-# ===============================
+# handlers/etf_handler.py
+from telegram.ext import CommandHandler
+from utils.etf_utils import get_etf_summary
 
-from telegram import Update
-from telegram.ext import ContextTypes, CommandHandler
-from utils.etf_utils import generate_etf_report
-
-async def etf_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+def etf_command(update, context):
     try:
-        args = context.args
-        if args:
-            arg = args[0].lower()
-            result = generate_etf_report(arg)
-        else:
-            result = generate_etf_report()
-        await update.message.reply_text(result)
+        summary = get_etf_summary()
+        update.message.reply_text(summary)
     except Exception as e:
-        await update.message.reply_text(f"❌ /etf komutunda hata oluştu: {e}")
+        update.message.reply_text("❌ ETF verisi alınırken hata oluştu.")
+        print(f"ETF Handler Error: {e}")
 
 def get_handler():
     return CommandHandler("etf", etf_command)
-    
