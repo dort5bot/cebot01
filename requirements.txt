@@ -1,24 +1,31 @@
-# Telegram ve görev zamanlayıcı
+# Telegram botu, job queue ve webhook desteği
 python-telegram-bot[job-queue,webhooks]==20.7
 
-# Ortam değişkenleri için
+# Ortam değişkenleri yüklemek için
 python-dotenv==1.0.1
 
-# HTTP istekleri
+# HTTP istekleri (senkron ve asenkron)
 requests==2.31.0
-aiohttp
+aiohttp==3.8.4
 
-# Veri işleme
-pandas
-numpy
+# Veri işleme ve sayısal hesaplama
+pandas==2.3.1
+numpy==2.2.6
 
-# Zaman ve tarih işlemleri
-pytz
-dateparser
+# Tarih ve zaman işlemleri
+pytz==2025.2
+dateparser==1.2.2
 
 # Binance API
 python-binance==1.0.29
 
-# (Render gibi ortamlarda ping için - gerekiyorsa)
+# Finansal veri çekmek için yfinance
+yfinance==0.2.37
+
+# Render gibi ortamlarda keep-alive için Flask
 Flask==2.3.2
-keep_alive  # varsa özel keep-alive.py dosyanız
+
+# Özel keep_alive modülünüz varsa, bu dosya repo içinde olacak; pip ile gelmez
+# keep_alive  # (bu satırı kaldır, dosyayı repo içine koy)
+
+# Eğer varsa başka ek modüller, onları da ekleyebilirsin
