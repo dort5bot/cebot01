@@ -1,14 +1,18 @@
 # handlers/etf_handler.py
-from telegram.ext import CommandHandler
-from utils.etf_utils import get_etf_summary
+from telegram import Update
+from telegram.ext import ContextTypes
+from history.etf_history import generate_etf_history_csv
+from utils.etf_utils import get_etf_snapshot
 
-def etf_command(update, context):
-    try:
-        summary = get_etf_summary()
-        update.message.reply_text(summary)
-    except Exception as e:
-        update.message.reply_text("❌ ETF verisi alınırken hata oluştu.")
-        print(f"ETF Handler Error: {e}")
+async def etf_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    snapshot = get_etf_snapshot()
 
-def get_handler():
-    return CommandHandler("etf", etf_command)
+    msg = "📊 <b>ETF Piyasa Özeti</b>\n\n"
+    for key, value in snapshot.items():
+        msg += f"• <b>{key}</b>: {value}\n"
+
+    await update.message.reply_text(msg, parse_mode="HTML")
+
+    file_path = generate_etf_history_csv()
+    if file_path:
+        await update.message.reply_document(document=open(file_path, "rb"))
