@@ -1,28 +1,32 @@
-###main.py 4+etf
-
+# main.py
 import os
 import logging
 from dotenv import load_dotenv
 from telegram.ext import ApplicationBuilder
 
-# Dosya sistemini hazırla
+# Gerekli başlatmalar
 from utils.init_files import init_data_files
 from keep_alive import keep_alive
 
+# Dosya sistemini hazırla
 init_data_files()
+
+# Ortam değişkenlerini yükle
 load_dotenv()
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 
-# Logging
+# Logging ayarları
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     level=logging.INFO
 )
 
-# Bot uygulaması
+# Uygulama başlat
 application = ApplicationBuilder().token(BOT_TOKEN).build()
 
-# Komut handler'ları
+# ===============================
+# ✅ Komut Handler Ekleme
+# ===============================
 from handlers.ap_handler import get_handler as ap_handler
 from handlers.io_handler import get_handler as io_handler
 from handlers.nls_handler import get_handler as nls_handler
@@ -40,7 +44,7 @@ application.add_handler(ap_handler())
 application.add_handler(io_handler())
 application.add_handler(nls_handler())
 application.add_handler(npr_handler())
-application.add_handler(etf_handler())
+application.add_handler(etf_handler())  # ETF entegresi
 application.add_handler(fr_handler())
 application.add_handler(al_handler())
 application.add_handler(sat_handler())
@@ -49,21 +53,30 @@ application.add_handler(aktif_handler())
 application.add_handler(raporum_handler())
 application.add_handler(apikey_handler())
 
-# JobQueue görevleri
+# ===============================
+# ✅ JobQueue Görevleri
+# ===============================
 from jobs.check_orders import schedule_order_check
 from jobs.fr_scheduler import schedule_fr_check
+from jobs.etf_job import schedule_etf_job  # ETF job
 
 schedule_order_check(application.job_queue)
 
-# İsteğe bağlı kullanıcı ve coin örneği (kendi ID ve coin ile değiştir)
+# Örnek kullanıcı tanımı (fr için)
 USER_ID = 123456789  # Değiştir
 COIN = "BTC"         # Değiştir
-
 schedule_fr_check(application, USER_ID, COIN)
 
-# Render keep_alive
+# ETF job'u başlat
+schedule_etf_job(application.job_queue)
+
+# ===============================
+# ✅ Uyanık Kalma
+# ===============================
 keep_alive()
 
-# Botu başlat
+# ===============================
+# ✅ Botu çalıştır
+# ===============================
 if __name__ == "__main__":
     application.run_polling()
