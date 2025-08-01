@@ -1,4 +1,4 @@
-# handlers/etf_handler.py
+##etf_handler
 
 from telegram.ext import CommandHandler, ContextTypes
 from telegram import Update
@@ -74,5 +74,6 @@ async def etf(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text(msg)
 
-def add_etf_handler(application, job_queue):
-    application.add_handler(CommandHandler("etf", etf))
+def get_handler():
+    from telegram.ext import CommandHandler
+    return CommandHandler("etf", etf)
