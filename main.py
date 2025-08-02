@@ -1,17 +1,21 @@
-# main.py
+# 📁 main.py
 import os
 import logging
 from dotenv import load_dotenv
 from telegram.ext import ApplicationBuilder
+from datetime import time
+import pytz
 
-# Gerekli başlatmalar
+# ===============================
+# ✅ Gerekli Başlatmalar
+# ===============================
 from utils.init_files import init_data_files
 from keep_alive import keep_alive
 
 # Dosya sistemini hazırla
 init_data_files()
 
-# Ortam değişkenlerini yükle
+# Ortam değişkenlerini yükle (.env içinden)
 load_dotenv()
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 
@@ -44,7 +48,7 @@ application.add_handler(ap_handler())
 application.add_handler(io_handler())
 application.add_handler(nls_handler())
 application.add_handler(npr_handler())
-application.add_handler(etf_handler())  # ETF entegresi
+application.add_handler(etf_handler())  # ✅ ETF entegresi
 application.add_handler(fr_handler())
 application.add_handler(al_handler())
 application.add_handler(sat_handler())
@@ -58,20 +62,26 @@ application.add_handler(apikey_handler())
 # ===============================
 from jobs.check_orders import schedule_order_check
 from jobs.fr_scheduler import schedule_fr_check
-from jobs.etf_job import schedule_etf_job  # ETF job
+from jobs.etf_job import etf_daily_job
 
+# Emir kontrol sistemini başlat
 schedule_order_check(application.job_queue)
 
-# Örnek kullanıcı tanımı (fr için)
-USER_ID = 123456789  # Değiştir
-COIN = "BTC"         # Değiştir
+# FR görev örneği (kullanıcı özelinde)
+USER_ID = 123456789  # ⚠️ Kendi ID'inizle değiştirin
+COIN = "BTC"         # ⚠️ İzlenen coin
 schedule_fr_check(application, USER_ID, COIN)
 
-# ETF job'u başlat
-schedule_etf_job(application.job_queue)
+# ✅ ETF günlük görevi (sabah 9:00 Türkiye saatiyle)
+job_time = time(hour=6, minute=0, tzinfo=pytz.timezone("Europe/Istanbul"))
+application.job_queue.run_daily(
+    etf_daily_job,
+    time=job_time,
+    name="etf_daily_job"
+)
 
 # ===============================
-# ✅ Uyanık Kalma
+# ✅ Uyanık Kalma (Render Free)
 # ===============================
 keep_alive()
 
