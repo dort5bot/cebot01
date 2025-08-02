@@ -1,22 +1,19 @@
-# 📁 main.py+p 
-
+###+td
 import os
 import logging
 from dotenv import load_dotenv
-from telegram.ext import ApplicationBuilder
+from telegram.ext import ApplicationBuilder, CommandHandler
 from datetime import time
 import pytz
-
-
 
 # ===============================
 # ✅ Gerekli Başlatmalar
 # ===============================
 from utils.init_files import init_data_files
-from telegram.ext import CommandHandler
 from keep_alive import keep_alive  # Sadece sunucu başlatacak, bot çalıştırmayacak
 
-
+# ⏩ Yeni Eklenen
+from handlers.trend_handler import register_td_handler  # 🔥 /td komutu için eklendi
 
 # Dosya sistemini hazırla
 init_data_files()
@@ -49,13 +46,11 @@ from handlers.stop_handler import get_handler as stop_handler
 from handlers.aktif_handler import get_handler as aktif_handler
 from handlers.raporum_handler import get_handler as raporum_handler 
 from handlers.apikey_handler import get_handler as apikey_handler 
- #p
+#p
 ##from handlers.p_handler import get_handler as p_handler
 from handlers.p_handler import price_command, price_detailed_command
 
-
-
-
+# 🔹 Tüm handler'ları uygulamaya kaydet
 application.add_handler(ap_handler()) 
 application.add_handler(io_handler())
 application.add_handler(nls_handler())
@@ -73,12 +68,9 @@ application.add_handler(apikey_handler())
 application.add_handler(CommandHandler("p", price_command))
 application.add_handler(CommandHandler("pd", price_detailed_command))
 
+# ⏩ Yeni Eklenen Handler (trend analizi)
+register_td_handler(application)  # 🔥 /td komutu buraya eklendi
 
-
-
-
-
- 
 # ===============================
 # ✅ JobQueue Görevleri
 # ===============================
@@ -103,7 +95,5 @@ application.job_queue.run_daily(
 # ✅ Ana Başlatıcı
 # ===============================
 if __name__ == "__main__":
-    keep_alive()  # Sadece web sunucusunu açar (ör. Flask), botu başlatmaz!
+    keep_alive()  # Sadece web sunucusunu açar
     application.run_polling()
-
-
