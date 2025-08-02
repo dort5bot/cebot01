@@ -49,8 +49,8 @@ from handlers.apikey_handler import get_handler as apikey_handler
 #p
 ##from handlers.p_handler import get_handler as p_handler
 from handlers.p_handler import price_command, price_detailed_command
-from handlers.scanner_handler import scanner_command
-
+#sil...from handlers.scanner_handler import scanner_command
+from handlers.sc_handler import sc_handler
 
 
 # 🔹 Tüm handler'ları uygulamaya kaydet
@@ -69,8 +69,8 @@ application.add_handler(apikey_handler())
 #p
 application.add_handler(CommandHandler("p", price_command))
 application.add_handler(CommandHandler("pd", price_detailed_command))
-application.add_handler(CommandHandler("sc", scanner_command))
-
+#sil..application.add_handler(CommandHandler("sc", scanner_command))
+application.add_handler(CommandHandler("sc", sc_handler))
 
 
 # ⏩ Yeni Eklenen Handler (trend analizi)
@@ -102,4 +102,5 @@ application.job_queue.run_daily(
 if __name__ == "__main__":
     keep_alive()  # Sadece web sunucusunu açar
     application.run_polling()
+
 
