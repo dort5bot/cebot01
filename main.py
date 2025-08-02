@@ -1,4 +1,4 @@
-# 📁 main.py
+# 📁 main.py+p 
 
 import os
 import logging
@@ -42,10 +42,12 @@ from handlers.al_handler import get_handler as al_handler
 from handlers.sat_handler import get_handler as sat_handler
 from handlers.stop_handler import get_handler as stop_handler
 from handlers.aktif_handler import get_handler as aktif_handler
-from handlers.raporum_handler import get_handler as raporum_handler
-from handlers.apikey_handler import get_handler as apikey_handler
+from handlers.raporum_handler import get_handler as raporum_handler 
+from handlers.apikey_handler import get_handler as apikey_handler 
+ #p
+from handlers.p_handler import get_handler as p_handler
 
-application.add_handler(ap_handler())
+application.add_handler(ap_handler()) 
 application.add_handler(io_handler())
 application.add_handler(nls_handler())
 application.add_handler(npr_handler())
@@ -55,9 +57,11 @@ application.add_handler(al_handler())
 application.add_handler(sat_handler())
 application.add_handler(stop_handler())
 application.add_handler(aktif_handler())
-application.add_handler(raporum_handler())
+application.add_handler(raporum_handler()) 
 application.add_handler(apikey_handler())
-
+#p
+application.add_handler(p_handler()) 
+ 
 # ===============================
 # ✅ JobQueue Görevleri
 # ===============================
