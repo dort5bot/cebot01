@@ -1,19 +1,23 @@
-##
-##p_handler.py
-
 # handlers/p_handler.py
+
 from telegram import Update
 from telegram.ext import ContextTypes
-from utils.p_utils import generate_price_delta_analysis
+from utils.p_utils import get_price_summary, get_detailed_analysis
 
-async def p_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not context.args:
-        await update.message.reply_text("Lütfen bir sembol girin. Örnek: /p BTCUSDT")
+async def price_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    coins = context.args
+    if not coins:
+        await update.message.reply_text("Lütfen en az bir coin girin. Örnek: /p BTC ETH")
         return
 
-    symbol = context.args[0].upper()
-    try:
-        result = generate_price_delta_analysis(symbol)
-        await update.message.reply_text(result, parse_mode="HTML")
-    except Exception as e:
-        await update.message.reply_text(f"Hata: {e}")
+    response = get_price_summary(coins)
+    await update.message.reply_text(response)
+
+async def price_detailed_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    coins = context.args
+    if not coins:
+        await update.message.reply_text("Lütfen en az bir coin girin. Örnek: /pd BTC ETH")
+        return
+
+    response = get_detailed_analysis(coins)
+    await update.message.reply_text(response)
