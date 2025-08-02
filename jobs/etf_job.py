@@ -1,13 +1,34 @@
 # jobs/etf_job.py
+import os
+import csv
+from datetime import datetime
+from telegram import Bot
+from utils.etf_utils import get_etf_data
 
-from telegram.ext import ContextTypes
-from datetime import time
-from utils.etf_utils import get_etf_data, save_etf_to_csv
+# Ortam değişkeninden admin ID alın (isteğe bağlı bildirim için)
+ADMIN_ID = os.getenv("ADMIN_ID")
 
-async def save_daily(context: ContextTypes.DEFAULT_TYPE):
-    etf_data = get_etf_data(["btc", "eth"])
-    save_etf_to_csv(etf_data)
-    print("ETF verisi CSV'ye kaydedildi.")
+# 📌 ETF geçmiş verisini CSV'ye yaz
+def save_etf_history(data: str):
+    os.makedirs("data", exist_ok=True)
+    csv_file = "data/etf_history.csv"
+    with open(csv_file, "a", newline="", encoding="utf-8") as file:
+        writer = csv.writer(file)
+        now = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+        writer.writerow([now, data])
 
-def add_etf_job(job_queue):
-    job_queue.run_daily(save_daily, time(hour=18, minute=0))
+# 🕒 JobQueue üzerinden çağrılan görev
+async def etf_daily_job(context):
+    try:
+        result = await get_etf_data()
+        save_etf_history(result)
+
+        # Eğer admin varsa mesaj gönder
+        if ADMIN_ID:
+            bot: Bot = context.bot
+            await bot.send_message(chat_id=int(ADMIN_ID), text=f"[ETF Günlük Rapor]\n{result}")
+
+    except Exception as e:
+        if ADMIN_ID:
+            await context.bot.send_message(chat_id=int(ADMIN_ID), text=f"[ETF JOB HATASI] {e}")
+            
