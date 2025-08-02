@@ -27,6 +27,7 @@ def get_order_book(symbol, limit=10):
     except Exception:
         return None
 
+# 🔍 Kline (mum) verilerini al
 def get_klines(symbol, interval="1h", limit=100):
     try:
         url = f"{BASE_URL}/klines"
@@ -36,3 +37,11 @@ def get_klines(symbol, interval="1h", limit=100):
     except Exception:
         return None
 
+# 🆕 get_multiple_klines: birden fazla zaman aralığı için klines döndürür
+def get_multiple_klines(symbol, intervals=["1h", "4h", "1d"], limit=100):
+    data = {}
+    for interval in intervals:
+        klines = get_klines(symbol, interval=interval, limit=limit)
+        if klines:
+            data[interval] = klines
+    return data
