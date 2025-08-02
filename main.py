@@ -1,4 +1,5 @@
 # 📁 main.py
+
 import os
 import logging
 from dotenv import load_dotenv
@@ -10,12 +11,12 @@ import pytz
 # ✅ Gerekli Başlatmalar
 # ===============================
 from utils.init_files import init_data_files
-from keep_alive import keep_alive
+from keep_alive import keep_alive  # Sadece sunucu başlatacak, bot çalıştırmayacak
 
 # Dosya sistemini hazırla
 init_data_files()
 
-# Ortam değişkenlerini yükle (.env içinden)
+# Ortam değişkenlerini yükle
 load_dotenv()
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 
@@ -48,7 +49,7 @@ application.add_handler(ap_handler())
 application.add_handler(io_handler())
 application.add_handler(nls_handler())
 application.add_handler(npr_handler())
-application.add_handler(etf_handler())  # ✅ ETF entegresi
+application.add_handler(etf_handler())
 application.add_handler(fr_handler())
 application.add_handler(al_handler())
 application.add_handler(sat_handler())
@@ -64,15 +65,12 @@ from jobs.check_orders import schedule_order_check
 from jobs.fr_scheduler import schedule_fr_check
 from jobs.etf_job import etf_daily_job
 
-# Emir kontrol sistemini başlat
 schedule_order_check(application.job_queue)
 
-# FR görev örneği (kullanıcı özelinde)
-USER_ID = 123456789  # ⚠️ Kendi ID'inizle değiştirin
-COIN = "BTC"         # ⚠️ İzlenen coin
+USER_ID = 123456789  # Kendi ID'inizle değiştirin
+COIN = "BTC"
 schedule_fr_check(application, USER_ID, COIN)
 
-# ✅ ETF günlük görevi (sabah 9:00 Türkiye saatiyle)
 job_time = time(hour=6, minute=0, tzinfo=pytz.timezone("Europe/Istanbul"))
 application.job_queue.run_daily(
     etf_daily_job,
@@ -81,12 +79,8 @@ application.job_queue.run_daily(
 )
 
 # ===============================
-# ✅ Uyanık Kalma (Render Free)
-# ===============================
-keep_alive()
-
-# ===============================
-# ✅ Botu çalıştır
+# ✅ Ana Başlatıcı
 # ===============================
 if __name__ == "__main__":
+    keep_alive()  # Sadece web sunucusunu açar (ör. Flask), botu başlatmaz!
     application.run_polling()
