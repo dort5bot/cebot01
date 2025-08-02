@@ -1,4 +1,4 @@
-###+td
+###+td++sc
 import os
 import logging
 from dotenv import load_dotenv
@@ -49,6 +49,9 @@ from handlers.apikey_handler import get_handler as apikey_handler
 #p
 ##from handlers.p_handler import get_handler as p_handler
 from handlers.p_handler import price_command, price_detailed_command
+from handlers.scanner_handler import scanner_command
+
+
 
 # 🔹 Tüm handler'ları uygulamaya kaydet
 application.add_handler(ap_handler()) 
@@ -64,9 +67,11 @@ application.add_handler(aktif_handler())
 application.add_handler(raporum_handler()) 
 application.add_handler(apikey_handler())
 #p
-##application.add_handler(p_handler())
 application.add_handler(CommandHandler("p", price_command))
 application.add_handler(CommandHandler("pd", price_detailed_command))
+application.add_handler(CommandHandler("sc", scanner_command))
+
+
 
 # ⏩ Yeni Eklenen Handler (trend analizi)
 register_td_handler(application)  # 🔥 /td komutu buraya eklendi
@@ -97,3 +102,4 @@ application.job_queue.run_daily(
 if __name__ == "__main__":
     keep_alive()  # Sadece web sunucusunu açar
     application.run_polling()
+
