@@ -7,11 +7,16 @@ from telegram.ext import ApplicationBuilder
 from datetime import time
 import pytz
 
+
+
 # ===============================
 # ✅ Gerekli Başlatmalar
 # ===============================
 from utils.init_files import init_data_files
+from telegram.ext import CommandHandler
 from keep_alive import keep_alive  # Sadece sunucu başlatacak, bot çalıştırmayacak
+
+
 
 # Dosya sistemini hazırla
 init_data_files()
@@ -100,4 +105,5 @@ application.job_queue.run_daily(
 if __name__ == "__main__":
     keep_alive()  # Sadece web sunucusunu açar (ör. Flask), botu başlatmaz!
     application.run_polling()
+
 
