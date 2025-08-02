@@ -45,7 +45,11 @@ from handlers.aktif_handler import get_handler as aktif_handler
 from handlers.raporum_handler import get_handler as raporum_handler 
 from handlers.apikey_handler import get_handler as apikey_handler 
  #p
-from handlers.p_handler import get_handler as p_handler
+##from handlers.p_handler import get_handler as p_handler
+from handlers.p_handler import price_command, price_detailed_command
+
+
+
 
 application.add_handler(ap_handler()) 
 application.add_handler(io_handler())
@@ -60,7 +64,15 @@ application.add_handler(aktif_handler())
 application.add_handler(raporum_handler()) 
 application.add_handler(apikey_handler())
 #p
-application.add_handler(p_handler()) 
+##application.add_handler(p_handler())
+application.add_handler(CommandHandler("p", price_command))
+application.add_handler(CommandHandler("pd", price_detailed_command))
+
+
+
+
+
+
  
 # ===============================
 # ✅ JobQueue Görevleri
@@ -88,3 +100,4 @@ application.job_queue.run_daily(
 if __name__ == "__main__":
     keep_alive()  # Sadece web sunucusunu açar (ör. Flask), botu başlatmaz!
     application.run_polling()
+
