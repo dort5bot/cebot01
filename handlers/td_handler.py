@@ -16,5 +16,5 @@ async def td_top_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(text, parse_mode="HTML")
 
 def register_td_handlers(app):
-    app.add_handler(CommandHandler("td", td_top_handler))
-    app.add_handler(CommandHandler("tdtop", td_top_handler))  # kısaltma
+    app.add_handler(CommandHandler("t", td_top_handler))
+    app.add_handler(CommandHandler("ttop", td_top_handler))  # kısaltma
