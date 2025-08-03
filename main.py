@@ -12,8 +12,6 @@ import pytz
 from utils.init_files import init_data_files
 from keep_alive import keep_alive  # Sadece sunucu başlatacak, bot çalıştırmayacak
 
-# ⏩ Yeni Eklenen
-from handlers.trend_handler import register_td_handler  # 🔥 /td komutu için eklendi
 
 # Dosya sistemini hazırla
 init_data_files()
@@ -46,12 +44,12 @@ from handlers.stop_handler import get_handler as stop_handler
 from handlers.aktif_handler import get_handler as aktif_handler
 from handlers.raporum_handler import get_handler as raporum_handler 
 from handlers.apikey_handler import get_handler as apikey_handler 
-#p
-##from handlers.p_handler import get_handler as p_handler
-from handlers.p_handler import price_command, price_detailed_command
-#sil...from handlers.scanner_handler import scanner_command
+from handlers.p_handler import price_command, price_detailed_command 
 from handlers.sc_handler import sc_handler
-
+ # ⏩ Yeni Eklenen
+from handlers.td_handler import register_td_handlers # 🔥 /td komutu için eklendi 
+ 
+ 
 
 # 🔹 Tüm handler'ları uygulamaya kaydet
 application.add_handler(ap_handler()) 
@@ -73,9 +71,10 @@ application.add_handler(CommandHandler("pd", price_detailed_command))
 application.add_handler(CommandHandler("sc", sc_handler))
 
 
-# ⏩ Yeni Eklenen Handler (trend analizi)
+# ⏩ Yeni Eklenen Handler (trend analizi) 
 register_td_handler(application)  # 🔥 /td komutu buraya eklendi
-
+ 
+ 
 # ===============================
 # ✅ JobQueue Görevleri
 # ===============================
@@ -102,5 +101,4 @@ application.job_queue.run_daily(
 if __name__ == "__main__":
     keep_alive()  # Sadece web sunucusunu açar
     application.run_polling()
-
 
