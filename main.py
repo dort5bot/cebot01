@@ -72,9 +72,12 @@ application.add_handler(CommandHandler("sc", sc_handler))
 
 
 # ⏩ Yeni Eklenen Handler (trend analizi) 
-register_td_handler(application)  # 🔥 /td komutu buraya eklendi
+register_td_handlers(application)  # 🔥 /td komutu buraya eklendi
  
- 
+
+
+
+
 # ===============================
 # ✅ JobQueue Görevleri
 # ===============================
@@ -101,4 +104,5 @@ application.job_queue.run_daily(
 if __name__ == "__main__":
     keep_alive()  # Sadece web sunucusunu açar
     application.run_polling()
+
 
