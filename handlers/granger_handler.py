@@ -1,4 +1,4 @@
-# 📂 handlers/granger_handler.py
+# 📂 handlers/granger_handler.py2
 from telegram import Update
 from telegram.ext import ContextTypes
 from utils.stats import (
