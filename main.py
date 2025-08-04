@@ -45,14 +45,11 @@ from handlers.raporum_handler import get_handler as raporum_handler
 from handlers.apikey_handler import get_handler as apikey_handler
 from handlers.p_handler import price_command, price_detailed_command
 from handlers.sc_handler import sc_handler
-
-# ⏩ Yeni Eklenen
 from handlers.td_handler import register_td_handlers  # 🔥 /td komutu için eklendi
-from handlers.granger_handler import (
-    granger_handler,
-    granger_matrix_handler,
-    matrix_handler
-)
+
+
+from handlers.granger_handler import granger_handler, granger_matrix_handler, matrix_handler
+
 
 # 🔹 Tüm handler'ları uygulamaya kaydet
 application.add_handler(ap_handler())
@@ -82,6 +79,14 @@ register_td_handlers(application)
 application.add_handler(CommandHandler("g", granger_handler))
 application.add_handler(CommandHandler("GM", granger_matrix_handler))
 application.add_handler(CommandHandler("m", matrix_handler))
+#grandler Opsiyonel:
+application.add_handler(CommandHandler("c", matrix_handler))   # Korelasyon
+application.add_handler(CommandHandler("ct", matrix_handler))  # Cointegration
+application.add_handler(CommandHandler("v", matrix_handler))   # VAR
+application.add_handler(CommandHandler("l", matrix_handler))   # Liderlik
+
+
+
 
 # ===============================
 # ✅ JobQueue Görevleri
@@ -112,3 +117,4 @@ application.job_queue.run_daily(
 if __name__ == "__main__":
     keep_alive()  # Sadece web sunucusunu açar
     application.run_polling()
+
