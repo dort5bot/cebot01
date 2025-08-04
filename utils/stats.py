@@ -1,70 +1,76 @@
 # 📂 utils/stats.py
-import pandas as pd
 import numpy as np
+import pandas as pd
 from statsmodels.tsa.stattools import grangercausalitytests, coint
 from statsmodels.tsa.api import VAR
 from utils.binance_api import get_klines
 
-def get_price_series(symbol, limit=100):
+def get_log_returns(symbol, limit=200):
     klines = get_klines(symbol, interval="1h", limit=limit)
-    if not klines:
-        return None
-    closes = [float(k[4]) for k in klines]
-    return pd.Series(closes, name=symbol)
+    if not klines: return None
+    prices = [float(k[4]) for k in klines]  # Close prices
+    df = pd.DataFrame(prices, columns=["close"])
+    df["log_return"] = np.log(df["close"] / df["close"].shift(1))
+    return df["log_return"].dropna()
 
 def align_data(coins):
     data = {}
     for coin in coins:
-        series = get_price_series(f"{coin}USDT")
-        if series is not None:
-            data[coin] = series.reset_index(drop=True)
-    return pd.DataFrame(data).dropna()
+        ret = get_log_returns(coin)
+        if ret is not None:
+            data[coin] = ret
+    df = pd.DataFrame(data).dropna()
+    return df if len(df.columns) >= 2 else None
 
-# Korelasyon Matrisi
+# 1️⃣ Korelasyon
 def correlation_matrix(coins):
     df = align_data(coins)
-    if df.empty:
-        return "Veri alınamadı."
-    corr = df.corr().round(3)
-    return f"📊 Korelasyon Matrisi:\n{corr.to_string()}"
+    if df is None: return "Yeterli veri yok."
+    corr = df.corr()
+    return f"Korelasyon Matrisi:\n{corr.round(2).to_string()}"
 
-# Granger Nedensellik
+# 2️⃣ Granger Nedensellik (tekli)
 def granger_test(coin1, coin2, maxlag=5):
     df = align_data([coin1, coin2])
-    if df.shape[1] != 2:
-        return "Veriler eksik."
+    if df is None: return "Yeterli veri yok."
     try:
-        test = grangercausalitytests(df[[coin2, coin1]], maxlag=maxlag, verbose=False)
-        pvals = [round(test[i+1][0]['ssr_ftest'][1], 4) for i in range(maxlag)]
-        return f"📈 Granger Testi ({coin1} -> {coin2}):\nP-değerleri: {pvals}"
+        test_result = grangercausalitytests(df[[coin1, coin2]], maxlag=maxlag, verbose=False)
+        p_values = [round(test_result[i+1][0]['ssr_chi2test'][1], 4) for i in range(maxlag)]
+        min_p = min(p_values)
+        conclusion = f"{coin1} → {coin2} için en düşük p-değeri: {min_p}"
+        if min_p < 0.05:
+            conclusion += "\n📊 Granger Nedensellik VAR."
+        else:
+            conclusion += "\nℹ️ Nedensellik bulunamadı."
+        return conclusion
     except Exception as e:
-        return f"Hata: {e}"
+        return f"Hata: {str(e)}"
 
+# 3️⃣ Granger Matrisi
 def granger_matrix(coins, maxlag=5):
     df = align_data(coins)
-    if df.empty:
-        return "Veri alınamadı."
-    result = "📈 Granger Nedensellik Matrisi (P-Değeri):\n"
-    matrix = pd.DataFrame(index=coins, columns=coins)
+    if df is None: return "Yeterli veri yok."
+    results = {}
+    for cause in coins:
+        row = {}
+        for effect in coins:
+            if cause == effect:
+                row[effect] = "-"
+                continue
+            try:
+                test_result = grangercausalitytests(df[[effect, cause]], maxlag=maxlag, verbose=False)
+                p_values = [test_result[i+1][0]['ssr_chi2test'][1] for i in range(maxlag)]
+                row[effect] = round(min(p_values), 3)
+            except:
+                row[effect] = "ERR"
+        results[cause] = row
+    matrix = pd.DataFrame(results).T
+    return f"Granger Nedensellik Matrisi (p-değerleri):\n{matrix}"
 
-    for c1 in coins:
-        for c2 in coins:
-            if c1 == c2:
-                matrix.loc[c1, c2] = "-"
-            else:
-                try:
-                    test = grangercausalitytests(df[[c2, c1]], maxlag=maxlag, verbose=False)
-                    pval = test[maxlag][0]['ssr_ftest'][1]
-                    matrix.loc[c1, c2] = round(pval, 3)
-                except:
-                    matrix.loc[c1, c2] = "err"
-
-    return result + matrix.to_string()
-
-# Cointegration Matrisi
+# 4️⃣ Cointegration
 def cointegration_matrix(coins):
     df = align_data(coins)
-    result = "🔗 Cointegration Matrisi:\n"
+    if df is None: return "Yeterli veri yok."
     matrix = pd.DataFrame(index=coins, columns=coins)
     for i in coins:
         for j in coins:
@@ -75,35 +81,35 @@ def cointegration_matrix(coins):
                     score, pval, _ = coint(df[i], df[j])
                     matrix.loc[i, j] = round(pval, 3)
                 except:
-                    matrix.loc[i, j] = "err"
-    return result + matrix.to_string()
+                    matrix.loc[i, j] = "ERR"
+    return f"Cointegration Matrisi (p-değerleri):\n{matrix}"
 
-# VAR Matrisi
+# 5️⃣ VAR Modeli
 def var_matrix(coins):
     df = align_data(coins)
-    if df.empty:
-        return "Veri alınamadı."
-    model = VAR(df)
+    if df is None: return "Yeterli veri yok."
     try:
-        result = model.fit(maxlags=5, ic='aic')
-        summary = result.summary()
-        return f"🧠 VAR Model Özeti:\n{summary}"
+        model = VAR(df)
+        results = model.fit(maxlags=5, ic='aic')
+        forecast = results.forecast(df.values[-results.k_ar:], steps=1)
+        pred = pd.DataFrame(forecast, columns=df.columns)
+        return f"VAR Modeli Tahminleri (1 adım sonrası):\n{pred.round(4).to_string(index=False)}"
     except Exception as e:
-        return f"VAR Modeli kurulamadı: {e}"
+        return f"Hata (VAR): {str(e)}"
 
-# Lider/Takipçi
+# 6️⃣ Lider/Takipçi (basit korelasyon farkı yaklaşımı)
 def leader_matrix(coins):
     df = align_data(coins)
-    if df.empty:
-        return "Veri alınamadı."
-    lags = {}
-    for coin in coins:
-        others = df.drop(columns=[coin])
-        try:
-            model = VAR(pd.concat([df[coin], others], axis=1))
-            res = model.fit(maxlags=5, ic='aic')
-            lag = res.k_ar
-            lags[coin] = lag
-        except:
-            lags[coin] = "err"
-    return "🚩 Liderlik Skoru (lag sayısı):\n" + "\n".join(f"{k}: {v}" for k, v in lags.items())
+    if df is None: return "Yeterli veri yok."
+    lead_scores = {}
+    for lead in coins:
+        score = 0
+        for lag in coins:
+            if lead == lag:
+                continue
+            shifted = df[lead].shift(1).corr(df[lag])
+            score += shifted if pd.notna(shifted) else 0
+        lead_scores[lead] = round(score, 3)
+    lead_sorted = dict(sorted(lead_scores.items(), key=lambda x: x[1], reverse=True))
+    msg = "\n".join([f"{k}: {v}" for k, v in lead_sorted.items()])
+    return f"Liderlik Skorları (yüksek = lider):\n{msg}"
