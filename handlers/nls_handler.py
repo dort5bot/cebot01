@@ -1,23 +1,20 @@
-##2
+##3
 #nls_handler.py
 ##
 from telegram import Update
 from telegram.ext import ContextTypes, CommandHandler
-from utils.nls_utils import analyze_nls
+from utils.io_utils import get_io_analysis, get_io_market_analysis
 
-async def nls_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def io_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
-        symbol = context.args[0].upper() if context.args else "BTCUSDT"
-        result = analyze_nls(symbol)
-        text = (
-            f"{result['symbol']} - NLS Skoru: {result['nls_score']}%\n"
-            f"Alış Değeri: {result['buy_value']}\n"
-            f"Satış Değeri: {result['sell_value']}\n"
-            f"Trend: {result['trend']}"
-        )
-        await update.message.reply_text(text)
+        if context.args:
+            symbol = context.args[0].upper() + "USDT"
+            result = get_io_analysis(symbol)
+        else:
+            result = get_io_market_analysis()
+        await update.message.reply_text(result)
     except Exception:
-        await update.message.reply_text("❌ /nls komutunda hata oluştu.")
+        await update.message.reply_text("❌ /io komutunda bir hata oluştu.")
 
 def get_handler():
-    return CommandHandler("nls", nls_command)
+    return CommandHandler("io", io_command)
