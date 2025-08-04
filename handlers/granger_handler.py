@@ -1,19 +1,15 @@
-##handlers/granger_handler.py
-
+# 📂 handlers/granger_handler.py
 from telegram import Update
 from telegram.ext import ContextTypes
 from utils.stats import (
-    granger_test,
-    granger_matrix,
-    correlation_matrix,
-    cointegration_matrix,
-    var_matrix,
-    leader_matrix,
+    granger_test, granger_matrix,
+    correlation_matrix, cointegration_matrix,
+    var_matrix, leader_matrix
 )
 
 async def granger_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if len(context.args) != 2:
-        await update.message.reply_text("Kullanım: /granger BTC ETH veya /g btc eth")
+        await update.message.reply_text("Kullanım: /g BTC ETH")
         return
 
     coin1, coin2 = context.args[0].upper(), context.args[1].upper()
@@ -22,7 +18,7 @@ async def granger_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def granger_matrix_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if len(context.args) < 2:
-        await update.message.reply_text("Kullanım: /granger_matrix BTC ETH BNB veya /GM btc eth bnb")
+        await update.message.reply_text("Kullanım: /GM BTC ETH BNB")
         return
 
     coins = [c.upper() for c in context.args]
