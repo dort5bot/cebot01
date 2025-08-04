@@ -1,84 +1,109 @@
-##stats.py (granler)
-
-import numpy as np
+# 📂 utils/stats.py
 import pandas as pd
+import numpy as np
 from statsmodels.tsa.stattools import grangercausalitytests, coint
 from statsmodels.tsa.api import VAR
-from utils.binance_api import get_ohlcv_multiple
+from utils.binance_api import get_klines
 
-def granger_test(coin1, coin2, lag=2):
-    df = get_ohlcv_multiple([coin1, coin2])
-    data = df[[coin1, coin2]].dropna()
-    try:
-        test = grangercausalitytests(data[[coin1, coin2]], maxlag=lag, verbose=False)
-        p_value = test[lag][0]['ssr_ftest'][1]
-        result = f"{coin1} -> {coin2} Granger Nedensellik p-değeri: {p_value:.4f}"
-        if p_value < 0.05:
-            result += " ✅ Nedensellik VAR"
-        else:
-            result += " ❌ Nedensellik YOK"
-        return result
-    except Exception as e:
-        return f"Hata: {str(e)}"
+def get_price_series(symbol, limit=100):
+    klines = get_klines(symbol, interval="1h", limit=limit)
+    if not klines:
+        return None
+    closes = [float(k[4]) for k in klines]
+    return pd.Series(closes, name=symbol)
 
-def granger_matrix(coins):
-    df = get_ohlcv_multiple(coins)
-    matrix = ""
-    for i in coins:
-        row = []
-        for j in coins:
-            if i == j:
-                row.append(" - ")
-            else:
-                try:
-                    p = grangercausalitytests(df[[i, j]].dropna(), maxlag=2, verbose=False)[2][0]['ssr_ftest'][1]
-                    row.append(f"{p:.2f}")
-                except:
-                    row.append("Err")
-        matrix += f"{i}: {' | '.join(row)}\n"
-    return f"📊 Granger Nedensellik Matrisi:\n{matrix}"
+def align_data(coins):
+    data = {}
+    for coin in coins:
+        series = get_price_series(f"{coin}USDT")
+        if series is not None:
+            data[coin] = series.reset_index(drop=True)
+    return pd.DataFrame(data).dropna()
 
+# Korelasyon Matrisi
 def correlation_matrix(coins):
-    df = get_ohlcv_multiple(coins)
-    corr = df.corr().round(2)
-    return f"📈 Korelasyon Matrisi:\n{corr.to_string()}"
+    df = align_data(coins)
+    if df.empty:
+        return "Veri alınamadı."
+    corr = df.corr().round(3)
+    return f"📊 Korelasyon Matrisi:\n{corr.to_string()}"
 
-def cointegration_matrix(coins):
-    df = get_ohlcv_multiple(coins)
-    result = "🔗 Cointegration Matrisi:\n"
-    for i in range(len(coins)):
-        for j in range(i+1, len(coins)):
-            try:
-                score, pvalue, _ = coint(df[coins[i]], df[coins[j]])
-                result += f"{coins[i]} - {coins[j]}: p={pvalue:.4f} {'✅' if pvalue < 0.05 else '❌'}\n"
-            except:
-                result += f"{coins[i]} - {coins[j]}: Hata\n"
-    return result
-
-def var_matrix(coins):
-    df = get_ohlcv_multiple(coins)
-    model = VAR(df.dropna())
+# Granger Nedensellik
+def granger_test(coin1, coin2, maxlag=5):
+    df = align_data([coin1, coin2])
+    if df.shape[1] != 2:
+        return "Veriler eksik."
     try:
-        result = model.fit(maxlags=2)
-        forecast = result.forecast(df.values[-result.k_ar:], steps=1)
-        out = pd.DataFrame(forecast, columns=df.columns)
-        return f"📉 VAR Tahmini (1 adım):\n{out.round(3).to_string(index=False)}"
+        test = grangercausalitytests(df[[coin2, coin1]], maxlag=maxlag, verbose=False)
+        pvals = [round(test[i+1][0]['ssr_ftest'][1], 4) for i in range(maxlag)]
+        return f"📈 Granger Testi ({coin1} -> {coin2}):\nP-değerleri: {pvals}"
     except Exception as e:
-        return f"VAR modeli hatası: {str(e)}"
+        return f"Hata: {e}"
 
-def leader_matrix(coins):
-    df = get_ohlcv_multiple(coins)
-    leaders = []
-    for i in coins:
-        row = []
-        for j in coins:
-            if i == j:
-                row.append(" - ")
+def granger_matrix(coins, maxlag=5):
+    df = align_data(coins)
+    if df.empty:
+        return "Veri alınamadı."
+    result = "📈 Granger Nedensellik Matrisi (P-Değeri):\n"
+    matrix = pd.DataFrame(index=coins, columns=coins)
+
+    for c1 in coins:
+        for c2 in coins:
+            if c1 == c2:
+                matrix.loc[c1, c2] = "-"
             else:
                 try:
-                    p = grangercausalitytests(df[[i, j]].dropna(), maxlag=2, verbose=False)[2][0]['ssr_ftest'][1]
-                    row.append("✔" if p < 0.05 else "✖")
+                    test = grangercausalitytests(df[[c2, c1]], maxlag=maxlag, verbose=False)
+                    pval = test[maxlag][0]['ssr_ftest'][1]
+                    matrix.loc[c1, c2] = round(pval, 3)
                 except:
-                    row.append("?")
-        leaders.append(f"{i}: {' '.join(row)}")
-    return "📍 Lider/Takipçi Matrisi:\n" + "\n".join(leaders)
+                    matrix.loc[c1, c2] = "err"
+
+    return result + matrix.to_string()
+
+# Cointegration Matrisi
+def cointegration_matrix(coins):
+    df = align_data(coins)
+    result = "🔗 Cointegration Matrisi:\n"
+    matrix = pd.DataFrame(index=coins, columns=coins)
+    for i in coins:
+        for j in coins:
+            if i == j:
+                matrix.loc[i, j] = "-"
+            else:
+                try:
+                    score, pval, _ = coint(df[i], df[j])
+                    matrix.loc[i, j] = round(pval, 3)
+                except:
+                    matrix.loc[i, j] = "err"
+    return result + matrix.to_string()
+
+# VAR Matrisi
+def var_matrix(coins):
+    df = align_data(coins)
+    if df.empty:
+        return "Veri alınamadı."
+    model = VAR(df)
+    try:
+        result = model.fit(maxlags=5, ic='aic')
+        summary = result.summary()
+        return f"🧠 VAR Model Özeti:\n{summary}"
+    except Exception as e:
+        return f"VAR Modeli kurulamadı: {e}"
+
+# Lider/Takipçi
+def leader_matrix(coins):
+    df = align_data(coins)
+    if df.empty:
+        return "Veri alınamadı."
+    lags = {}
+    for coin in coins:
+        others = df.drop(columns=[coin])
+        try:
+            model = VAR(pd.concat([df[coin], others], axis=1))
+            res = model.fit(maxlags=5, ic='aic')
+            lag = res.k_ar
+            lags[coin] = lag
+        except:
+            lags[coin] = "err"
+    return "🚩 Liderlik Skoru (lag sayısı):\n" + "\n".join(f"{k}: {v}" for k, v in lags.items())
