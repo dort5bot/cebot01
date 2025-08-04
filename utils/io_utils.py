@@ -1,141 +1,91 @@
-# ==2-3=4===================================
-# ✅ MegaBot Final - utils/io_utils.py
-# /io komutu - Alış/Satış baskı oranları hesaplama
-# ======================================
-from .binance_api import get_order_book, get_klines
-from utils.symbols import get_all_usdt_symbols  # tüm coinleri çekmek için
+#
+##io_utils.py
+##
+import requests
+from utils.binance_api import get_ticker, get_klines
+from datetime import datetime
 import numpy as np
 
-def calculate_mts(trend_list):
-    # Basit MTS puanı (geliştirilebilir)
-    score = 0
-    for t in trend_list:
-        if t == "🔼":
-            score += 1
-        elif t == "🔻":
-            score -= 1
-    return round(score / len(trend_list), 2)
+# Binance API endpoint
+BASE_URL = "https://api.binance.com"
 
-def detect_trend(pct):
-    return "🔼" if pct >= 50 else "🔻"
+def get_all_symbols():
+    url = f"{BASE_URL}/api/v3/ticker/24hr"
+    data = requests.get(url).json()
+    return [x['symbol'] for x in data if x['symbol'].endswith("USDT") and not any(i in x['symbol'] for i in ['UP', 'DOWN', 'BULL', 'BEAR'])]
 
-def get_io_market_analysis():
-    symbols = get_all_usdt_symbols()
-    coin_data = []
-    total_market_cash = 0
-    volume_share_acc = 0
+def get_volume_share():
+    url = f"{BASE_URL}/api/v3/ticker/24hr"
+    data = requests.get(url).json()
+    total_volume = sum([float(x['quoteVolume']) for x in data if x['symbol'].endswith("USDT")])
+    vol_dict = {x['symbol']: float(x['quoteVolume']) for x in data if x['symbol'].endswith("USDT")}
+    volume_share = {sym: (vol / total_volume) for sym, vol in vol_dict.items()}
+    return volume_share
 
-    # Zamansal aralıklar
-    intervals = ["15m", "1h", "4h", "12h", "1d"]
-    interval_map = {"15m": "15m", "1h": "1h", "4h": "4h", "12h": "12h", "1d": "1d"}
+def get_recent_cash_flow(symbol, interval="15m", limit=20):
+    klines = get_klines(symbol, interval, limit)
+    volumes = [float(k[7]) for k in klines]  # quote asset volume
+    changes = np.diff(volumes)
+    percent_change = (changes[-1] / volumes[-2]) * 100 if volumes[-2] != 0 else 0
+    return round(percent_change, 1)
 
-    # Bölüm 1: genel market verisi
-    for sym in symbols:
-        klines = get_multiple_klines(sym, intervals=interval_map.values(), limit=2)
-        if not klines or "1h" not in klines:
-            continue
+def get_mts_score(symbol):
+    trend = ""
+    total_score = 0
+    timeframes = ["15m", "1h", "4h", "12h", "1d"]
+    arrows = []
+    for tf in timeframes:
+        change = get_recent_cash_flow(symbol, tf)
+        arrows.append("🔼" if change >= 50 else "🔻")
+        total_score += 1 if change >= 50 else 0
+    score = round(total_score / len(timeframes), 2)
+    return score, "".join(arrows)
 
-        last_price = float(klines["1h"][-1][4])
-        volume_1h = float(klines["1h"][-1][5])
-        coin_cash = last_price * volume_1h
-        total_market_cash += coin_cash
+def get_market_insight_report():
+    symbols = get_all_symbols()[:50]
+    vol_share = get_volume_share()
+    total_market_cash = sum(vol_share.values())
+    sorted_vol = sorted(vol_share.items(), key=lambda x: x[1], reverse=True)
 
-        coin_entry = {"symbol": sym, "cash": coin_cash, "trend_data": {}, "trend_texts": [], "volume_1h": volume_1h}
-        
-        for key in interval_map:
-            kline_data = klines.get(key)
-            if kline_data and len(kline_data) >= 2:
-                prev_close = float(kline_data[-2][4])
-                curr_close = float(kline_data[-1][4])
-                pct = (curr_close - prev_close) / prev_close * 100
-                coin_entry["trend_data"][key] = round(pct, 2)
-                coin_entry["trend_texts"].append(detect_trend(pct))
-        
-        coin_data.append(coin_entry)
+    short_term_power = round(sum([v for k, v in sorted_vol[:10]]), 2)
+    report = "✅Bölüm-1: Market Bilgisi\n"
+    report += f"Kısa Vadeli Market Alım Gücü: {short_term_power:.2f}X\n"
+    report += f"Marketteki Hacim Payı: %{round(total_market_cash * 100, 1)}\n"
 
-    # Sıralama ve filtreleme
-    sorted_coins = sorted(coin_data, key=lambda x: x["cash"], reverse=True)[:30]
-    
-    market_share = sum([c["volume_1h"] for c in sorted_coins]) / sum([c["volume_1h"] for c in coin_data]) * 100
-    market_power = round(np.mean([abs(c["trend_data"].get("1h", 0)) for c in sorted_coins]) / 100, 2)
+    report += "\n✅Bölüm-2: Zaman Bazlı Nakit Girişi\n"
+    for tf in ["15m", "1h", "4h", "12h", "1d"]:
+        changes = [get_recent_cash_flow(sym, tf) for sym in symbols]
+        avg_change = round(np.mean(changes), 1)
+        arrow = "🔼" if avg_change >= 50 else "🔻"
+        report += f"{tf} => %{avg_change} {arrow}\n"
 
-    # Bölüm 2: zaman bazlı market değişimleri
-    time_analysis = {}
-    for interval in interval_map:
-        pct_list = [c["trend_data"].get(interval, 0) for c in sorted_coins if interval in c["trend_data"]]
-        avg_pct = np.mean(pct_list)
-        time_analysis[interval] = f"%{round(avg_pct, 1)} {detect_trend(avg_pct)}"
+    report += "\n✅Bölüm-3: En Çok Nakit Girişi Olanlar\n"
+    report += "Coin Nakit: % Market | 15m:% | Mts | Trend\n"
+    for sym, share in sorted_vol[:30]:
+        pct15 = get_recent_cash_flow(sym)
+        mts, trend = get_mts_score(sym)
+        report += f"{sym} Nakit: %{round(share*100,1)} 15m:%{pct15} Mts:{mts} {trend}\n"
 
-    # Bölüm 3: nakit akışı listesi
-    flow_lines = []
-    for coin in sorted_coins:
-        cash_pct = round(coin["cash"] / total_market_cash * 100, 1)
-        mts_score = calculate_mts(coin["trend_texts"])
-        line = f"{coin['symbol']} Nakit: %{cash_pct} 15m:%{coin['trend_data'].get('15m', 0)} Mts: {mts_score} {' '.join(coin['trend_texts'])}"
-        flow_lines.append(line)
+    report += "\n✅Bölüm-4: Piyasa Yorum\n"
+    report += "Piyasa ciddi anlamda risk barındırıyor. Alım yapma!\n"
+    report += "1d nakit girişi %50 üzerine çıkarsa risk azalır.\n"
 
-    # Bölüm 4: yorum
-    d1_value = float(time_analysis['1d'].split('%')[1].split(' ')[0])
-    if d1_value > 50:
-        comment = "✅ Günlük nakit girişi %50'nin üstünde. Risk azalmış görünüyor."
-    else:
-        comment = (
-            "❗ Piyasa ciddi anlamda risk barındırıyor. Alım Yapma!\n"
-            "Günlük nakit giriş oranı %50 üzerine çıkarsa risk azalacaktır."
-        )
+    return report
 
-    result = (
-        "✅ Bölüm 1: Market Hakkında Bilgi\n"
-        f"Kısa Vadeli Market Alım Gücü: {market_power}X\n"
-        f"Marketteki Hacim Payı: %{round(market_share, 1)}\n\n"
-
-        "✅ Bölüm 2: Zamansal Nakit Girişi\n" +
-        "\n".join([f"{k} => {v}" for k, v in time_analysis.items()]) + "\n\n"
-
-        "✅ Bölüm 3: Nakit Göçü Raporu (En çok para girenler)\n" +
-        "\n".join(flow_lines) + "\n\n"
-
-        "✅ Bölüm 4: Yorum\n" + comment
-    )
-
-    return result
-def get_io_analysis(symbol="BTCUSDT", limit=10):
-    orderbook = get_order_book(symbol, limit=limit)
-    if not orderbook:
-        return "⚠️ Emir defteri verisi alınamadı."
-
+def get_coin_insight_report(symbol):
     try:
-        bids = orderbook.get("bids", [])
-        asks = orderbook.get("asks", [])
-
-        buy_volume = sum(float(bid[1]) for bid in bids)
-        sell_volume = sum(float(ask[1]) for ask in asks)
-
-        total_volume = buy_volume + sell_volume
-        if total_volume == 0:
-            return "⚠️ Emir defterinde işlem hacmi yok."
-
-        buy_pressure = (buy_volume / total_volume) * 100
-        sell_pressure = (sell_volume / total_volume) * 100
-
-        comment = ""
-        if buy_pressure > sell_pressure + 10:
-            comment = "Alım baskısı güçlü görünüyor."
-        elif sell_pressure > buy_pressure + 10:
-            comment = "Satım baskısı güçlü görünüyor."
+        pct15 = get_recent_cash_flow(symbol)
+        mts, trend = get_mts_score(symbol)
+        report = f"✅{symbol} Coin Analizi\n"
+        report += f"15 dakikalık Nakit Girişi: %{pct15}\n"
+        report += f"MTS Skoru: {mts} {trend}\n"
+        report += "Yorum: "
+        if mts >= 0.6:
+            report += "Güçlü nakit akışı. İlgi yüksek.\n"
+        elif mts >= 0.4:
+            report += "Kararsız piyasa, dikkatli ol.\n"
         else:
-            comment = "Piyasa dengede."
-
-        result = (
-            f"📊 {symbol} Emir Defteri Analizi:\n"
-            f"• Alım Hacmi: {buy_volume:.2f}\n"
-            f"• Satım Hacmi: {sell_volume:.2f}\n"
-            f"• Alım Baskısı: %{buy_pressure:.2f}\n"
-            f"• Satım Baskısı: %{sell_pressure:.2f}\n"
-            f"📝 Yorum: {comment}"
-        )
-
-        return result
-
-    except Exception as e:
-        return f"⚠️ Analiz hatası: {e}"
+            report += "Zayıf nakit akışı, yatırım için uygun değil.\n"
+        return report
+    except:
+        return f"❌ {symbol} için veri alınamadı."
