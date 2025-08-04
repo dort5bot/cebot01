@@ -1,12 +1,11 @@
 #
 ##io_utils.py
-##
+##2
+
 import requests
-from utils.binance_api import get_ticker, get_klines
-from datetime import datetime
+from utils.binance_api import get_klines
 import numpy as np
 
-# Binance API endpoint
 BASE_URL = "https://api.binance.com"
 
 def get_all_symbols():
@@ -30,7 +29,6 @@ def get_recent_cash_flow(symbol, interval="15m", limit=20):
     return round(percent_change, 1)
 
 def get_mts_score(symbol):
-    trend = ""
     total_score = 0
     timeframes = ["15m", "1h", "4h", "12h", "1d"]
     arrows = []
@@ -42,29 +40,35 @@ def get_mts_score(symbol):
     return score, "".join(arrows)
 
 def get_market_insight_report():
-    symbols = get_all_symbols()[:50]
+    symbols = get_all_symbols()[:20]  # Optimize: Sadece en çok işlem gören 20 coin
     vol_share = get_volume_share()
     total_market_cash = sum(vol_share.values())
     sorted_vol = sorted(vol_share.items(), key=lambda x: x[1], reverse=True)
 
-    short_term_power = round(sum([v for k, v in sorted_vol[:10]]), 2)
     report = "✅Bölüm-1: Market Bilgisi\n"
+    short_term_power = round(sum([v for k, v in sorted_vol[:10]]), 2)
     report += f"Kısa Vadeli Market Alım Gücü: {short_term_power:.2f}X\n"
     report += f"Marketteki Hacim Payı: %{round(total_market_cash * 100, 1)}\n"
 
     report += "\n✅Bölüm-2: Zaman Bazlı Nakit Girişi\n"
     for tf in ["15m", "1h", "4h", "12h", "1d"]:
-        changes = [get_recent_cash_flow(sym, tf) for sym in symbols]
-        avg_change = round(np.mean(changes), 1)
-        arrow = "🔼" if avg_change >= 50 else "🔻"
-        report += f"{tf} => %{avg_change} {arrow}\n"
+        try:
+            changes = [get_recent_cash_flow(sym, tf) for sym in symbols]
+            avg_change = round(np.mean(changes), 1)
+            arrow = "🔼" if avg_change >= 50 else "🔻"
+            report += f"{tf} => %{avg_change} {arrow}\n"
+        except:
+            report += f"{tf} => veri alınamadı\n"
 
     report += "\n✅Bölüm-3: En Çok Nakit Girişi Olanlar\n"
     report += "Coin Nakit: % Market | 15m:% | Mts | Trend\n"
-    for sym, share in sorted_vol[:30]:
-        pct15 = get_recent_cash_flow(sym)
-        mts, trend = get_mts_score(sym)
-        report += f"{sym} Nakit: %{round(share*100,1)} 15m:%{pct15} Mts:{mts} {trend}\n"
+    for sym, share in sorted_vol[:20]:  # optimize: sadece ilk 20
+        try:
+            pct15 = get_recent_cash_flow(sym)
+            mts, trend = get_mts_score(sym)
+            report += f"{sym} Nakit: %{round(share*100,1)} 15m:%{pct15} Mts:{mts} {trend}\n"
+        except:
+            report += f"{sym} => veri alınamadı\n"
 
     report += "\n✅Bölüm-4: Piyasa Yorum\n"
     report += "Piyasa ciddi anlamda risk barındırıyor. Alım yapma!\n"
