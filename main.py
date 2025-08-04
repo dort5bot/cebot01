@@ -48,7 +48,9 @@ from handlers.p_handler import price_command, price_detailed_command
 from handlers.sc_handler import sc_handler
  # ⏩ Yeni Eklenen
 from handlers.td_handler import register_td_handlers # 🔥 /td komutu için eklendi 
- 
+ from handlers.granger_handler import (
+    granger_handler, granger_matrix_handler, matrix_handler
+)
  
 
 # 🔹 Tüm handler'ları uygulamaya kaydet
@@ -74,6 +76,9 @@ application.add_handler(CommandHandler("sc", sc_handler))
 # ⏩ Yeni Eklenen Handler (trend analizi) 
 register_td_handlers(application)  # 🔥 /td komutu buraya eklendi
  
+application.add_handler(CommandHandler("g", granger_handler))
+application.add_handler(CommandHandler("GM", granger_matrix_handler))
+application.add_handler(CommandHandler("m", matrix_handler))
 
 
 
@@ -104,5 +109,6 @@ application.job_queue.run_daily(
 if __name__ == "__main__":
     keep_alive()  # Sadece web sunucusunu açar
     application.run_polling()
+
 
 
