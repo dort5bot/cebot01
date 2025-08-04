@@ -2,48 +2,30 @@
 from telegram import Update
 from telegram.ext import ContextTypes
 from utils.stats import (
-    granger_test, granger_matrix,
-    correlation_matrix, cointegration_matrix,
-    var_matrix, leader_matrix
+    granger_test, granger_matrix, cointegration_matrix,
+    correlation_matrix, var_matrix, leader_matrix
 )
 
 async def granger_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if len(context.args) != 2:
-        await update.message.reply_text("Kullanım: /g BTC ETH")
+    args = context.args
+    if not args:
+        await update.message.reply_text("Kullanım:\n/g COIN1 COIN2\n/g matrix COIN1 COIN2 ...")
         return
 
-    coin1, coin2 = context.args[0].upper(), context.args[1].upper()
-    result = granger_test(coin1, coin2)
-    await update.message.reply_text(result)
+    cmd = args[0].lower()
+    coins = [arg.upper() for arg in args if arg.upper().isalpha()]
 
-async def granger_matrix_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if len(context.args) < 2:
-        await update.message.reply_text("Kullanım: /GM BTC ETH BNB")
-        return
-
-    coins = [c.upper() for c in context.args]
-    result = granger_matrix(coins)
-    await update.message.reply_text(result)
-
-async def matrix_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if len(context.args) < 2:
-        await update.message.reply_text("Kullanım: /m [c|g|ct|v|l] coin1 coin2 ...")
-        return
-
-    mode = context.args[0].lower()
-    coins = [c.upper() for c in context.args[1:]]
-
-    if mode == "g":
-        result = granger_matrix(coins)
-    elif mode == "c":
-        result = correlation_matrix(coins)
-    elif mode == "ct":
-        result = cointegration_matrix(coins)
-    elif mode == "v":
-        result = var_matrix(coins)
-    elif mode == "l":
-        result = leader_matrix(coins)
+    if cmd == "matrix":
+        await update.message.reply_text(granger_matrix(coins))
+    elif cmd == "cointegration":
+        await update.message.reply_text(cointegration_matrix(coins))
+    elif cmd == "correlation":
+        await update.message.reply_text(correlation_matrix(coins))
+    elif cmd == "var":
+        await update.message.reply_text(var_matrix(coins))
+    elif cmd == "leader":
+        await update.message.reply_text(leader_matrix(coins))
+    elif len(coins) == 2:
+        await update.message.reply_text(granger_test(coins[0], coins[1]))
     else:
-        result = "Geçersiz analiz türü. Kullanım: /m [c|g|ct|v|l] coin1 coin2 ..."
-
-    await update.message.reply_text(result)
+        await update.message.reply_text("Geçersiz komut. Lütfen en az 2 coin belirtin.")
