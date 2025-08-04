@@ -1,4 +1,4 @@
-###+td++sc
+##main.py 
 import os
 import logging
 from dotenv import load_dotenv
@@ -11,7 +11,6 @@ import pytz
 # ===============================
 from utils.init_files import init_data_files
 from keep_alive import keep_alive  # Sadece sunucu başlatacak, bot çalıştırmayacak
-
 
 # Dosya sistemini hazırla
 init_data_files()
@@ -42,18 +41,21 @@ from handlers.al_handler import get_handler as al_handler
 from handlers.sat_handler import get_handler as sat_handler
 from handlers.stop_handler import get_handler as stop_handler
 from handlers.aktif_handler import get_handler as aktif_handler
-from handlers.raporum_handler import get_handler as raporum_handler 
-from handlers.apikey_handler import get_handler as apikey_handler 
-from handlers.p_handler import price_command, price_detailed_command 
+from handlers.raporum_handler import get_handler as raporum_handler
+from handlers.apikey_handler import get_handler as apikey_handler
+from handlers.p_handler import price_command, price_detailed_command
 from handlers.sc_handler import sc_handler
- # ⏩ Yeni Eklenen
-from handlers.td_handler import register_td_handlers # 🔥 /td komutu için eklendi 
-from handlers.granger_handler import ( granger_handler, granger_matrix_handler, matrix_handler
+
+# ⏩ Yeni Eklenen
+from handlers.td_handler import register_td_handlers  # 🔥 /td komutu için eklendi
+from handlers.granger_handler import (
+    granger_handler,
+    granger_matrix_handler,
+    matrix_handler
 )
- 
 
 # 🔹 Tüm handler'ları uygulamaya kaydet
-application.add_handler(ap_handler()) 
+application.add_handler(ap_handler())
 application.add_handler(io_handler())
 application.add_handler(nls_handler())
 application.add_handler(npr_handler())
@@ -63,24 +65,23 @@ application.add_handler(al_handler())
 application.add_handler(sat_handler())
 application.add_handler(stop_handler())
 application.add_handler(aktif_handler())
-application.add_handler(raporum_handler()) 
+application.add_handler(raporum_handler())
 application.add_handler(apikey_handler())
-#p
+
+# /p ve /pd komutları
 application.add_handler(CommandHandler("p", price_command))
 application.add_handler(CommandHandler("pd", price_detailed_command))
-#sil..application.add_handler(CommandHandler("sc", scanner_command))
+
+# /sc komutu
 application.add_handler(CommandHandler("sc", sc_handler))
 
+# /td komutları
+register_td_handlers(application)
 
-# ⏩ Yeni Eklenen Handler (trend analizi) 
-register_td_handlers(application)  # 🔥 /td komutu buraya eklendi
- 
+# Granger komutları
 application.add_handler(CommandHandler("g", granger_handler))
 application.add_handler(CommandHandler("GM", granger_matrix_handler))
 application.add_handler(CommandHandler("m", matrix_handler))
-
-
-
 
 # ===============================
 # ✅ JobQueue Görevleri
@@ -89,12 +90,15 @@ from jobs.check_orders import schedule_order_check
 from jobs.fr_scheduler import schedule_fr_check
 from jobs.etf_job import etf_daily_job
 
+# Emir kontrol sistemi
 schedule_order_check(application.job_queue)
 
-USER_ID = 123456789  # Kendi ID'inizle değiştirin
+# Fonlama oranı kontrolü
+USER_ID = 123456789  # Kendi Telegram ID'inizi girin
 COIN = "BTC"
 schedule_fr_check(application, USER_ID, COIN)
 
+# ETF günlük job
 job_time = time(hour=6, minute=0, tzinfo=pytz.timezone("Europe/Istanbul"))
 application.job_queue.run_daily(
     etf_daily_job,
@@ -108,7 +112,3 @@ application.job_queue.run_daily(
 if __name__ == "__main__":
     keep_alive()  # Sadece web sunucusunu açar
     application.run_polling()
-
-
-
-
