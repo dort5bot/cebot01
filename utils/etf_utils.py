@@ -4,48 +4,56 @@ import aiohttp
 from datetime import datetime
 import pytz
 
-async def get_etf_data():
-    url = "https://api.sosovalue.com/data/etf/fund-trend?symbol=USBTC"  # örnek endpoint
-    headers = {
-        "User-Agent": "Mozilla/5.0",
-        "accept": "application/json"
+# ETF simgeleri ve açıklamaları
+ETF_CONFIG = {
+    "BTC": {
+        "IBIT": "BlackRock",
+        "GBTC": "Grayscale"
+    },
+    "ETH": {
+        "ETHB": "BlackRock",
+        "ETHE": "Grayscale"
     }
+}
 
-    try:
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url, headers=headers, timeout=10) as resp:
-                if resp.status != 200:
-                    return f"API hatası: {resp.status}"
-                data = await resp.json()
-    except Exception as e:
-        return f"API bağlantı hatası: {e}"
+# Yahoo Finance API URL şablonu
+YAHOO_URL_TEMPLATE = "https://query1.finance.yahoo.com/v8/finance/chart/{}?interval=1d&range=5d"
 
-    # Veriyi çözümle
-    try:
-        rows = data.get("data", {}).get("rows", [])
-        if not rows:
-            return "Veri bulunamadı."
+async def fetch_last_two_closes(symbol):
+    url = YAHOO_URL_TEMPLATE.format(symbol)
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url, timeout=10) as response:
+            data = await response.json()
+            result = data["chart"]["result"][0]
+            closes = result["indicators"]["adjclose"][0]["adjclose"]
+            return closes[-2:]  # [önceki, son]
 
-        # Son 1-2 günün verisi
-        latest = rows[-1]
-        prev = rows[-2] if len(rows) > 1 else None
+async def generate_etf_report():
+    tz = pytz.timezone("Europe/Istanbul")
+    now = datetime.now(tz)
+    date_str = now.strftime("%Y-%m-%d")
 
-        date = latest.get("date")
-        value = latest.get("value")
-        diff = None
-        if prev:
-            diff = value - prev.get("value")
+    report = f"📊 *Spot ETF Net Akış Raporu* ({date_str})\n\n"
 
-        tz = pytz.timezone("Europe/Istanbul")
-        now = datetime.now(tz).strftime("%Y-%m-%d %H:%M")
+    for asset, etfs in ETF_CONFIG.items():
+        total_flow = 0
+        flow_lines = []
+        for symbol, issuer in etfs.items():
+            try:
+                closes = await fetch_last_two_closes(symbol)
+                if None in closes:
+                    continue
+                flow = closes[1] - closes[0]
+                total_flow += flow
+                sign = "+" if flow >= 0 else "-"
+                flow_lines.append(f"{sign}${abs(flow):,.0f} M$ {issuer}")
+            except Exception as e:
+                flow_lines.append(f"{issuer}: veri alınamadı")
 
-        msg = f"📊 *BTC Spot ETF Net Akışı* ({now})\n"
-        msg += f"🟢 Tarih: {date}\n"
-        msg += f"💰 Akış: ${value:,.0f}"
-        if diff:
-            delta = f"(+${diff:,.0f})" if diff > 0 else f"(-${abs(diff):,.0f})"
-            msg += f" {delta}"
+        emoji = "🟢" if total_flow >= 0 else "🔴"
+        total_str = f"+${total_flow:,.0f} M$" if total_flow >= 0 else f"-${abs(total_flow):,.0f} M$"
+        detail_str = ", ".join(flow_lines)
+        report += f"• {asset}: {total_str} {emoji}\n  ({detail_str})\n"
 
-        return msg
-    except Exception as e:
-        return f"Veri çözümleme hatası: {e}"
+    return report
+                       
