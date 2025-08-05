@@ -3,31 +3,57 @@
 # /nls komutu - Net Likidite Skoru hesaplama
 # ======================================
 
-from .binance_api import get_order_book as get_orderbook
+import pandas as pd
+import os
+from datetime import datetime
+from utils.io_utils import get_mts_score
 
-def calculate_nls(symbol):
-    ob = get_orderbook(symbol)
-    buy = sum(float(bid[0]) * float(bid[1]) for bid in ob["bids"])
-    sell = sum(float(ask[0]) * float(ask[1]) for ask in ob["asks"])
-    net = buy - sell
-    score = round(net / (buy + sell + 1e-9) * 100, 2)
-    return {"nls_score": score, "buy_value": buy, "sell_value": sell}
+CSV_PATH = "data/signals.csv"
+TIMEFRAMES = ["15m", "1h", "4h", "12h", "1d"]
 
-def analyze_nls(symbol):
-    result = calculate_nls(symbol)
-    score = result["nls_score"]
+def init_csv():
+    if not os.path.exists("data"):
+        os.makedirs("data")
+    if not os.path.exists(CSV_PATH):
+        df = pd.DataFrame(columns=["symbol"] + TIMEFRAMES + ["timestamp"])
+        df.to_csv(CSV_PATH, index=False)
 
-    if score > 20:
-        trend = "AL"
-    elif score < -20:
-        trend = "SAT"
-    else:
-        trend = "NÖTR"
+def append_signal(symbol):
+    init_csv()
+    df = pd.read_csv(CSV_PATH)
 
-    return {
-        "symbol": symbol,
-        "nls_score": score,
-        "buy_value": result["buy_value"],
-        "sell_value": result["sell_value"],
-        "trend": trend
-    }
+    score, trends = get_mts_score(symbol)
+    if len(trends) != len(TIMEFRAMES):
+        return False
+
+    now = datetime.utcnow().strftime("%Y-%m-%d %H:%M")
+    row = {"symbol": symbol, "timestamp": now}
+    row.update(dict(zip(TIMEFRAMES, list(trends))))
+    df = pd.concat([df, pd.DataFrame([row])], ignore_index=True)
+    df.to_csv(CSV_PATH, index=False)
+    return True
+
+def read_signals():
+    init_csv()
+    try:
+        return pd.read_csv(CSV_PATH)
+    except:
+        return pd.DataFrame()
+
+def remove_signal(symbol):
+    df = read_signals()
+    df = df[df['symbol'] != symbol]
+    df.to_csv(CSV_PATH, index=False)
+
+def check_signals():
+    df = read_signals()
+    report = "⏰ Alarm Taraması Sonucu:\n"
+    if df.empty:
+        return "🚫 Aktif alarm yok."
+
+    for _, row in df.iterrows():
+        symbol = row['symbol']
+        trend_data = " ".join([f"{tf}:{row[tf]}" for tf in TIMEFRAMES])
+        report += f"🚨 {symbol} → {trend_data}\n"
+        remove_signal(symbol)  # Alarm sonrası sil
+    return report
