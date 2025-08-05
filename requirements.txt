@@ -10,7 +10,7 @@ aiohttp==3.8.4
 
 # Veri işleme ve sayısal hesaplama
 pandas==2.3.1
-numpy==2.2.6
+numpy #numpy==2.2.6 da uyumsuzluk sorunu oluyor 
 
 # Tarih ve zaman işlemleri
 pytz==2025.2
@@ -31,4 +31,5 @@ Flask==2.3.2
 # varsa ek modüller
 # granger matrix yapisi
 statsmodels==0.14.1
+
 
