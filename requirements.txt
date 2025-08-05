@@ -28,6 +28,7 @@ Flask==2.3.2
 # Özel keep_alive modülünüz varsa, bu dosya repo içinde olacak; pip ile gelmez
 # keep_alive  # (bu satırı kaldır, dosyayı repo içine koy)
 
-# Eğer varsa başka ek modüller, onları da ekleyebilirsin
+# varsa ek modüller
 # granger matrix yapisi
-Collecting statsmodels
+statsmodels==0.14.1
+
