@@ -13,4 +13,3 @@ async def etf(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 def get_handler():
     return CommandHandler("etf", etf)
-    
