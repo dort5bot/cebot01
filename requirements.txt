@@ -29,3 +29,5 @@ Flask==2.3.2
 # keep_alive  # (bu satırı kaldır, dosyayı repo içine koy)
 
 # Eğer varsa başka ek modüller, onları da ekleyebilirsin
+# granger matrix yapisi
+Collecting statsmodels
