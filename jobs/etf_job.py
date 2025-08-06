@@ -3,7 +3,8 @@ import os
 import csv
 from datetime import datetime
 from telegram import Bot
-from utils.etf_utils import generate_etf_report  # ✅ doğru fonksiyon
+from utils.etf_utils import get_etf_flow_report
+
 
 ADMIN_ID = os.getenv("ADMIN_ID")
 
