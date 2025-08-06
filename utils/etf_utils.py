@@ -1,8 +1,9 @@
 # utils/etf_utils.py cg
-## utils/etf_utils.py
+# utils/etf_utils.py
 
 import aiohttp
 import datetime
+import json
 
 COINGLASS_API = "https://api.coinglass.com/api/pro/v1/futures/etf/history?type=2"
 HEADERS = {
@@ -37,7 +38,8 @@ async def get_etf_flow_report():
             async with session.get(COINGLASS_API, headers=HEADERS) as resp:
                 if resp.status != 200:
                     raise Exception(f"API durumu: {resp.status}")
-                data = await resp.json()
+                text_data = await resp.text()
+                data = json.loads(text_data)
     except Exception as e:
         return f"❌ Coinglass verisi alınamadı: {e}"
 
