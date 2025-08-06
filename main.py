@@ -35,7 +35,7 @@ from handlers.ap_handler import get_handler as ap_handler
 from handlers.io_handler import get_handler as io_handler
 from handlers.nls_handler import get_handler as nls_handler
 from handlers.npr_handler import get_handler as npr_handler
-from handlers.etf_handler import get_handler as etf_handler
+#from handlers.etf_handler import get_handler as etf_handler
 from handlers.fr_handler import get_handler as fr_handler
 from handlers.al_handler import get_handler as al_handler
 from handlers.sat_handler import get_handler as sat_handler
@@ -47,9 +47,8 @@ from handlers.p_handler import price_command, price_detailed_command
 from handlers.sc_handler import sc_handler
 from handlers.td_handler import register_td_handlers  # 🔥 /td komutu için eklendi
 
-
 from handlers.granger_handler import granger_handler, granger_matrix_handler, matrix_handler
-
+from handlers.etf_handler import etf_handler  # Doğru olan bu
 
 # 🔹 Tüm handler'ları uygulamaya kaydet
 application.add_handler(ap_handler())
@@ -117,4 +116,5 @@ application.job_queue.run_daily(
 if __name__ == "__main__":
     keep_alive()  # Sadece web sunucusunu açar
     application.run_polling()
+
 
