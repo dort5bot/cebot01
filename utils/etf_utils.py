@@ -1,14 +1,12 @@
 # utils/etf_utils.py cg
-# utils/etf_utils.py
-
 import aiohttp
 import datetime
 import json
 
 COINGLASS_API = "https://api.coinglass.com/api/pro/v1/futures/etf/history?type=2"
 HEADERS = {
-    "User-Agent": "Mozilla/5.0",
-    "accept": "application/json"
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+    "accept": "application/json, text/plain, */*"
 }
 
 PROVIDER_MAPPING = {
@@ -31,15 +29,20 @@ def get_coin_from_symbol(symbol: str) -> str:
 
 async def get_etf_flow_report():
     today = datetime.datetime.utcnow().strftime("%Y-%m-%d")
-    report_lines = [f"📊 Spot ETF Net Akış Raporu ({today})\n"]
+    report_lines = [f"📊 Spot ETF Net Akış 2Raporu ({today})\n"]
 
     try:
         async with aiohttp.ClientSession() as session:
             async with session.get(COINGLASS_API, headers=HEADERS) as resp:
                 if resp.status != 200:
-                    raise Exception(f"API durumu: {resp.status}")
+                    return f"❌ Coinglass API durumu: {resp.status}"
                 text_data = await resp.text()
-                data = json.loads(text_data)
+                if not text_data.strip():
+                    return "❌ Coinglass boş içerik döndürdü (IP engeli veya koruma olabilir)"
+                try:
+                    data = json.loads(text_data)
+                except json.JSONDecodeError as je:
+                    return f"❌ JSON ayrıştırma hatası: {je}.\nYanıt: {text_data[:200]}"
     except Exception as e:
         return f"❌ Coinglass verisi alınamadı: {e}"
 
