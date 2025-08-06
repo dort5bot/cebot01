@@ -1,5 +1,4 @@
-# utils/etf_utils.py
-
+# utils/etf_utils.py2
 import aiohttp
 from datetime import datetime
 import pytz
@@ -41,7 +40,7 @@ async def generate_etf_report():
     now = datetime.now(tz)
     date_str = now.strftime("%Y-%m-%d")
 
-    report = f"📊 *Spot ETF Net Akış Raporu* ({date_str})\n\n"
+    report = f"📊 *Spot ETF Net Akış Rap* ({date_str})\n\n"
 
     for asset, etfs in ETF_CONFIG.items():
         total_flow = 0
@@ -66,4 +65,3 @@ async def generate_etf_report():
         report += f"• {asset}: {total_str} {emoji}\n  ({flow_details})\n"
 
     return report
-    
