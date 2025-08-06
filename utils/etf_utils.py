@@ -1,70 +1,73 @@
 # utils/etf_utils.py cg
-# utils/etf_utils.py
+## utils/etf_utils.py
 
 import aiohttp
 import datetime
-from bs4 import BeautifulSoup
 
-COINGLASS_URL = "https://www.coinglass.com/etf"
+COINGLASS_API = "https://api.coinglass.com/api/pro/v1/futures/etf/history?type=2"
+HEADERS = {
+    "User-Agent": "Mozilla/5.0",
+    "accept": "application/json"
+}
 
-async def fetch_etf_html():
-    headers = {
-        "User-Agent": "Mozilla/5.0"
-    }
-    async with aiohttp.ClientSession() as session:
-        async with session.get(COINGLASS_URL, headers=headers) as response:
-            if response.status != 200:
-                raise Exception(f"Coinglass sayfasına erişilemedi: {response.status}")
-            return await response.text()
+PROVIDER_MAPPING = {
+    "IBIT": "BlackRock",
+    "FBTC": "Fidelity",
+    "BITB": "Bitwise",
+    "ARKB": "Ark",
+    "GBTC": "Grayscale",
+    "ETHE": "Grayscale",
+    "HODL": "VanEck",
+    "BTCO": "Invesco",
+    "EZBC": "Franklin",
+    "BRRR": "Valkyrie",
+}
 
-def parse_etf_data(html):
-    soup = BeautifulSoup(html, "html.parser")
-    table = soup.find("table")
-    if not table:
-        raise Exception("ETF verisi tablosu bulunamadı")
-
-    rows = table.find_all("tr")[1:]  # Başlık satırını atla
-    etf_data = {"BTC": [], "ETH": []}
-
-    for row in rows:
-        cols = row.find_all("td")
-        if len(cols) < 5:
-            continue
-
-        symbol = cols[0].text.strip()
-        netflow_str = cols[4].text.strip().replace(",", "").replace("$", "").replace("M", "")
-        coin = "BTC" if "BTC" in symbol else "ETH" if "ETH" in symbol else None
-        provider = symbol
-
-        try:
-            netflow = float(netflow_str)
-        except ValueError:
-            continue
-
-        if coin:
-            etf_data[coin].append((provider, netflow))
-
-    return etf_data
+def get_coin_from_symbol(symbol: str) -> str:
+    if symbol.endswith("E") or symbol.startswith("ETH"):
+        return "ETH"
+    return "BTC"
 
 async def get_etf_flow_report():
     today = datetime.datetime.utcnow().strftime("%Y-%m-%d")
     report_lines = [f"📊 Spot ETF Net Akış Raporu ({today})\n"]
 
     try:
-        html = await fetch_etf_html()
-        etf_data = parse_etf_data(html)
+        async with aiohttp.ClientSession() as session:
+            async with session.get(COINGLASS_API, headers=HEADERS) as resp:
+                if resp.status != 200:
+                    raise Exception(f"API durumu: {resp.status}")
+                data = await resp.json()
     except Exception as e:
         return f"❌ Coinglass verisi alınamadı: {e}"
 
-    for coin, flows in etf_data.items():
-        if not flows:
-            report_lines.append(f"• {coin}: Veri bulunamadı\n")
+    try:
+        etf_list = data["data"]["etfList"]
+    except Exception:
+        return "❌ Veri yapısı çözümlenemedi"
+
+    coin_data = {"BTC": [], "ETH": []}
+
+    for item in etf_list:
+        symbol = item.get("symbol", "")
+        flow_str = item.get("lastNetInflow", "")
+        try:
+            flow = float(flow_str)
+        except:
             continue
 
-        total_flow = sum(f for _, f in flows)
-        emoji = "🟢" if total_flow >= 0 else "🔴"
-        provider_lines = [f"{p}: {'+' if f >= 0 else ''}${f:.2f}M" for p, f in flows]
-        total_line = f"• {coin}: {'+' if total_flow >= 0 else ''}${total_flow:.2f}M {emoji}\n  ({', '.join(provider_lines)})"
-        report_lines.append(total_line)
+        coin = get_coin_from_symbol(symbol)
+        provider = PROVIDER_MAPPING.get(symbol, symbol)
+        coin_data[coin].append((provider, flow))
+
+    for coin, flows in coin_data.items():
+        if not flows:
+            report_lines.append(f"• {coin}: Veri yok\n")
+            continue
+
+        total = sum([f for _, f in flows])
+        emoji = "🟢" if total >= 0 else "🔴"
+        flow_lines = [f"{p}: {'+' if f >= 0 else ''}${f:.2f}M" for p, f in flows]
+        report_lines.append(f"• {coin}: {'+' if total >= 0 else ''}${total:.2f}M {emoji}\n  ({', '.join(flow_lines)})")
 
     return "\n".join(report_lines)
