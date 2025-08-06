@@ -1,25 +1,20 @@
 # utils/etf_utils.py2
 import aiohttp
-from datetime import datetime
-import pytz
+import datetime
 
-# Kullanılabilir ETF'ler ve açıklamaları
 ETF_CONFIG = {
     "BTC": {
-        "IBIT": "BlackRock",
-        "GBTC": "Grayscale"
+        "BlackRock": "IBIT",
+        "Grayscale": "GBTC"
     },
     "ETH": {
-        "ETHE": "Grayscale"
+        "BlackRock": "FBTC",
+        "Grayscale": "ETHE"
     }
 }
 
-# Yahoo Finance URL şablonu
-YAHOO_URL_TEMPLATE = "https://query1.finance.yahoo.com/v8/finance/chart/{}?interval=1d&range=5d"
-
-# 2 günlük kapanış verisi al
 async def fetch_last_two_closes(symbol):
-    url = YAHOO_URL_TEMPLATE.format(symbol)
+    url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?interval=1d&range=5d"
     async with aiohttp.ClientSession() as session:
         async with session.get(url, timeout=10) as response:
             if response.status != 200:
@@ -29,39 +24,40 @@ async def fetch_last_two_closes(symbol):
     try:
         result = data["chart"]["result"][0]
         closes = result["indicators"]["adjclose"][0]["adjclose"]
-        closes = [round(c, 2) if c is not None else None for c in closes]
-        return closes[-2:]  # son 2 gün
-    except Exception:
-        raise Exception(f"{symbol} için veri çözümlenemedi")
+        volumes = result["indicators"]["quote"][0]["volume"]
 
-# Rapor üret
-async def generate_etf_report():
-    tz = pytz.timezone("Europe/Istanbul")
-    now = datetime.now(tz)
-    date_str = now.strftime("%Y-%m-%d")
+        # None olmayan kapanış ve hacimleri eşleştir
+        cleaned = [(c, v) for c, v in zip(closes, volumes) if c is not None and v is not None]
 
-    report = f"📊 *Spot ETF Net Akış Rap* ({date_str})\n\n"
+        if len(cleaned) < 2:
+            raise Exception(f"{symbol} için yeterli geçerli veri yok.")
 
-    for asset, etfs in ETF_CONFIG.items():
+        (prev_close, _), (last_close, volume) = cleaned[-2], cleaned[-1]
+        price_diff = last_close - prev_close
+        net_flow = round(price_diff * volume / 1_000_000, 2)  # Milyon dolar cinsinden
+        return net_flow
+    except Exception as e:
+        raise Exception(f"{symbol} için veri çözümlenemedi: {e}")
+
+async def get_etf_flow_report():
+    today = datetime.datetime.utcnow().strftime("%Y-%m-%d")
+    report_lines = [f"📊 Spot ETF Net Akış Raporu ({today})\n"]
+
+    for coin, providers in ETF_CONFIG.items():
         total_flow = 0
-        flow_lines = []
-
-        for symbol, issuer in etfs.items():
+        provider_lines = []
+        for provider_name, symbol in providers.items():
             try:
-                closes = await fetch_last_two_closes(symbol)
-                if None in closes:
-                    raise Exception("Eksik veri")
-                flow = closes[1] - closes[0]
+                flow = await fetch_last_two_closes(symbol)
                 total_flow += flow
-                sign = "+" if flow >= 0 else "-"
-                flow_lines.append(f"{issuer}: {sign}${abs(flow):,.2f} M$")
+                flow_str = f"{'+' if flow >= 0 else ''}${flow} M$"
+                provider_lines.append(f"{provider_name}: {flow_str}")
             except Exception as e:
-                flow_lines.append(f"{issuer}: veri alınamadı")
+                provider_lines.append(f"{provider_name}: veri alınamadı")
 
+        total_str = f"{'+' if total_flow >= 0 else ''}${total_flow:.2f} M$"
         emoji = "🟢" if total_flow >= 0 else "🔴"
-        total_str = f"+${total_flow:,.2f} M$" if total_flow >= 0 else f"-${abs(total_flow):,.2f} M$"
-        flow_details = ", ".join(flow_lines)
+        provider_text = ", ".join(provider_lines)
+        report_lines.append(f"• {coin}: {total_str} {emoji}\n  ({provider_text})")
 
-        report += f"• {asset}: {total_str} {emoji}\n  ({flow_details})\n"
-
-    return report
+    return "\n".join(report_lines)
