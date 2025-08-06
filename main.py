@@ -49,13 +49,15 @@ from handlers.td_handler import register_td_handlers  # 🔥 /td komutu için ek
 
 from handlers.granger_handler import granger_handler, granger_matrix_handler, matrix_handler
 from handlers.etf_handler import etf_handler  # Doğru olan bu
+#from handlers.etf_handler import get_handler as etf_handler
+
 
 # 🔹 Tüm handler'ları uygulamaya kaydet
 application.add_handler(ap_handler())
 application.add_handler(io_handler())
 application.add_handler(nls_handler())
 application.add_handler(npr_handler())
-application.add_handler(etf_handler())
+#application.add_handler(etf_handler())
 application.add_handler(fr_handler())
 application.add_handler(al_handler())
 application.add_handler(sat_handler())
@@ -84,6 +86,7 @@ application.add_handler(CommandHandler("ct", matrix_handler))  # Cointegration
 application.add_handler(CommandHandler("v", matrix_handler))   # VAR
 application.add_handler(CommandHandler("l", matrix_handler))   # Liderlik
 
+application.add_handler(CommandHandler("etf", etf_handler))  
 
 
 
@@ -116,5 +119,6 @@ application.job_queue.run_daily(
 if __name__ == "__main__":
     keep_alive()  # Sadece web sunucusunu açar
     application.run_polling()
+
 
 
