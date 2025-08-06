@@ -1,63 +1,70 @@
-# utils/etf_utils.py2
+# utils/etf_utils.py cg
+# utils/etf_utils.py
+
 import aiohttp
 import datetime
+from bs4 import BeautifulSoup
 
-ETF_CONFIG = {
-    "BTC": {
-        "BlackRock": "IBIT",
-        "Grayscale": "GBTC"
-    },
-    "ETH": {
-        "BlackRock": "FBTC",
-        "Grayscale": "ETHE"
+COINGLASS_URL = "https://www.coinglass.com/etf"
+
+async def fetch_etf_html():
+    headers = {
+        "User-Agent": "Mozilla/5.0"
     }
-}
-
-async def fetch_last_two_closes(symbol):
-    url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?interval=1d&range=5d"
     async with aiohttp.ClientSession() as session:
-        async with session.get(url, timeout=10) as response:
+        async with session.get(COINGLASS_URL, headers=headers) as response:
             if response.status != 200:
-                raise Exception(f"{symbol} için API hatası: {response.status}")
-            data = await response.json()
+                raise Exception(f"Coinglass sayfasına erişilemedi: {response.status}")
+            return await response.text()
 
-    try:
-        result = data["chart"]["result"][0]
-        closes = result["indicators"]["adjclose"][0]["adjclose"]
-        volumes = result["indicators"]["quote"][0]["volume"]
+def parse_etf_data(html):
+    soup = BeautifulSoup(html, "html.parser")
+    table = soup.find("table")
+    if not table:
+        raise Exception("ETF verisi tablosu bulunamadı")
 
-        # None olmayan kapanış ve hacimleri eşleştir
-        cleaned = [(c, v) for c, v in zip(closes, volumes) if c is not None and v is not None]
+    rows = table.find_all("tr")[1:]  # Başlık satırını atla
+    etf_data = {"BTC": [], "ETH": []}
 
-        if len(cleaned) < 2:
-            raise Exception(f"{symbol} için yeterli geçerli veri yok.")
+    for row in rows:
+        cols = row.find_all("td")
+        if len(cols) < 5:
+            continue
 
-        (prev_close, _), (last_close, volume) = cleaned[-2], cleaned[-1]
-        price_diff = last_close - prev_close
-        net_flow = round(price_diff * volume / 1_000_000, 2)  # Milyon dolar cinsinden
-        return net_flow
-    except Exception as e:
-        raise Exception(f"{symbol} için veri çözümlenemedi: {e}")
+        symbol = cols[0].text.strip()
+        netflow_str = cols[4].text.strip().replace(",", "").replace("$", "").replace("M", "")
+        coin = "BTC" if "BTC" in symbol else "ETH" if "ETH" in symbol else None
+        provider = symbol
+
+        try:
+            netflow = float(netflow_str)
+        except ValueError:
+            continue
+
+        if coin:
+            etf_data[coin].append((provider, netflow))
+
+    return etf_data
 
 async def get_etf_flow_report():
     today = datetime.datetime.utcnow().strftime("%Y-%m-%d")
     report_lines = [f"📊 Spot ETF Net Akış Raporu ({today})\n"]
 
-    for coin, providers in ETF_CONFIG.items():
-        total_flow = 0
-        provider_lines = []
-        for provider_name, symbol in providers.items():
-            try:
-                flow = await fetch_last_two_closes(symbol)
-                total_flow += flow
-                flow_str = f"{'+' if flow >= 0 else ''}${flow} M$"
-                provider_lines.append(f"{provider_name}: {flow_str}")
-            except Exception as e:
-                provider_lines.append(f"{provider_name}: veri alınamadı")
+    try:
+        html = await fetch_etf_html()
+        etf_data = parse_etf_data(html)
+    except Exception as e:
+        return f"❌ Coinglass verisi alınamadı: {e}"
 
-        total_str = f"{'+' if total_flow >= 0 else ''}${total_flow:.2f} M$"
+    for coin, flows in etf_data.items():
+        if not flows:
+            report_lines.append(f"• {coin}: Veri bulunamadı\n")
+            continue
+
+        total_flow = sum(f for _, f in flows)
         emoji = "🟢" if total_flow >= 0 else "🔴"
-        provider_text = ", ".join(provider_lines)
-        report_lines.append(f"• {coin}: {total_str} {emoji}\n  ({provider_text})")
+        provider_lines = [f"{p}: {'+' if f >= 0 else ''}${f:.2f}M" for p, f in flows]
+        total_line = f"• {coin}: {'+' if total_flow >= 0 else ''}${total_flow:.2f}M {emoji}\n  ({', '.join(provider_lines)})"
+        report_lines.append(total_line)
 
     return "\n".join(report_lines)
