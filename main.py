@@ -95,7 +95,7 @@ application.add_handler(CommandHandler("etf", etf_handler))
 # ===============================
 from jobs.check_orders import schedule_order_check
 from jobs.fr_scheduler import schedule_fr_check
-from jobs.etf_job import etf_daily_job
+#from jobs.etf_job import etf_daily_job
 
 # Emir kontrol sistemi
 schedule_order_check(application.job_queue)
@@ -105,13 +105,13 @@ USER_ID = 123456789  # Kendi Telegram ID'inizi girin
 COIN = "BTC"
 schedule_fr_check(application, USER_ID, COIN)
 
-# ETF günlük job
-job_time = time(hour=6, minute=0, tzinfo=pytz.timezone("Europe/Istanbul"))
-application.job_queue.run_daily(
-    etf_daily_job,
-    time=job_time,
-    name="etf_daily_job"
-)
+# ETF günlük job -yeninyapida gerek yok
+#job_time = time(hour=6, minute=0, tzinfo=pytz.timezone("Europe/Istanbul"))
+#application.job_queue.run_daily(
+#    etf_daily_job,
+#    time=job_time,
+#    name="etf_daily_job"
+#)
 
 # ===============================
 # ✅ Ana Başlatıcı
@@ -119,6 +119,7 @@ application.job_queue.run_daily(
 if __name__ == "__main__":
     keep_alive()  # Sadece web sunucusunu açar
     application.run_polling()
+
 
 
 
