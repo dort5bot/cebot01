@@ -47,7 +47,7 @@ async def fetch_coin_etf_data(coin):
     async with aiohttp.ClientSession() as session:
         async with session.get(url, headers=headers) as response:
             if response.status != 200:
-                raise Exception(f"{coin} için Farside verisi alınamadı.")
+                raise Exception(f"{coin} için 2❗Farside verisi alınamadı.")
             html = await response.text()
 
     soup = BeautifulSoup(html, "html.parser")
@@ -95,3 +95,4 @@ async def get_full_etf_report():
     report_date = btc_date if btc_date >= eth_date else eth_date
     return f"📊 Spot ETF Net Akış Raporu ({report_date})\n\n{btc_report}\n\n{eth_report}"
         
+
