@@ -1,92 +1,47 @@
 # utils/etf_utils.py farisi
+
 import aiohttp
 from bs4 import BeautifulSoup
 
-FARSIDE_URLS = {
-    "BTC": "https://farside.co.uk/btc/",
-    "ETH": "https://farside.co.uk/eth/"
-}
-
-PROVIDERS = ["BlackRock", "Fidelity", "Grayscale"]
-
-def interpret_trend(today, yesterday):
-    try:
-        today = float(today)
-        yesterday = float(yesterday)
-    except:
-        return "Trend belirlenemedi ❓"
-
-    if today > 0 and yesterday > 0:
-        if today > yesterday:
-            return "Düne göre artış 📈"
-        elif today < yesterday:
-            return "Düne göre azalış ↘️"
-        else:
-            return "Aynı seviye ➖"
-    elif today < 0 and yesterday < 0:
-        if today < yesterday:
-            return "Çıkış artışı 🔻"
-        elif today > yesterday:
-            return "Çıkış azaldı ↗️"
-        else:
-            return "Aynı seviye ➖"
-    elif today > 0 and yesterday < 0:
-        return "Pozitife döndü 🟢"
-    elif today < 0 and yesterday > 0:
-        return "Negatife döndü 🔴"
-    else:
-        return "Trend belirlenemedi ❓"
-
-async def fetch_coin_etf_data(coin):
-    url = FARSIDE_URLS[coin]
+async def fetch_farside_data(coin: str):
+    url = f"https://farside.co.uk/{coin.lower()}/"
     async with aiohttp.ClientSession() as session:
         async with session.get(url) as response:
             if response.status != 200:
-                raise Exception(f"{coin} için Farside verisi alınamadı.")
+                raise Exception(f"{coin} için Farside erişim hatası: {response.status}")
             html = await response.text()
 
     soup = BeautifulSoup(html, "html.parser")
     table = soup.find("table")
     if not table:
-        raise Exception(f"{coin} için tablo bulunamadı.")
+        raise Exception(f"{coin} için Farside verisi alınamadı.")
 
-    rows = table.find_all("tr")[1:]
-    if len(rows) < 2:
+    rows = table.find_all("tr")[1:]  # Başlık satırını atla
+    data = []
+
+    for row in rows:
+        cols = row.find_all("td")
+        if len(cols) < 2:
+            continue
+        date_str = cols[0].get_text(strip=True)
+        try:
+            netflow = float(cols[1].get_text(strip=True).replace(",", "").replace("$", ""))
+        except ValueError:
+            continue
+        data.append((date_str, netflow))
+
+    if len(data) < 2:
         raise Exception(f"{coin} için yeterli geçmiş veri yok.")
 
-    today_row = [td.text.strip().replace("$", "") for td in rows[0].find_all("td")]
-    yesterday_row = [td.text.strip().replace("$", "") for td in rows[1].find_all("td")]
-
-    date = today_row[0]
-    today_values = today_row[1:]  # Provider1, Provider2, ..., Total
-    yesterday_values = yesterday_row[1:]
-
-    if len(today_values) != len(PROVIDERS) + 1:
-        raise Exception(f"{coin} veri formatı beklenen gibi değil.")
-
-    provider_today = list(map(lambda v: float(v.replace(",", "")), today_values[:-1]))
-    provider_yesterday = list(map(lambda v: float(v.replace(",", "")), yesterday_values[:-1]))
-
-    total_today = float(today_values[-1].replace(",", ""))
-    total_yesterday = float(yesterday_values[-1].replace(",", ""))
-
-    trend = interpret_trend(total_today, total_yesterday)
-    emoji = "🟢" if total_today >= 0 else "🔴"
-    total_str = f"{'+' if total_today >= 0 else ''}${total_today:.2f} M$"
-
-    provider_lines = []
-    for name, val in zip(PROVIDERS, provider_today):
-        p_str = f"{'+' if val >= 0 else ''}${val:.2f} M$"
-        provider_lines.append(f"  {name}: {p_str}")
-
-    coin_report = f"• {coin}: {total_str} {emoji}   ({trend})\n" + "\n".join(provider_lines)
-    return date, coin_report
-
-async def get_full_etf_report():
-    btc_date, btc_report = await fetch_coin_etf_data("BTC")
-    eth_date, eth_report = await fetch_coin_etf_data("ETH")
-
-    # En güncel tarihi üstte göstermek için
-    report_date = btc_date if btc_date >= eth_date else eth_date
-    return f"📊 Spot ETF Net Akış Raporu ({report_date})\n\n{btc_report}\n\n{eth_report}"
+    today_value = data[0][1]
+    yesterday_value = data[1][1]
+    change = today_value - yesterday_value
+    trend = "📈" if change > 0 else ("📉" if change < 0 else "➡️")
+    
+    return {
+        "today": today_value,
+        "change": change,
+        "trend": trend,
+        "raw": data[:3]
+    }
     
