@@ -1,78 +1,92 @@
-# utils/etf_utils.py cg
+# utils/etf_utils.py farisi
 import aiohttp
-import datetime
-import json
+from bs4 import BeautifulSoup
 
-COINGLASS_API = "https://api.coinglass.com/api/pro/v1/futures/etf/history?type=2"
-HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
-    "accept": "application/json, text/plain, */*"
+FARSIDE_URLS = {
+    "BTC": "https://farside.co.uk/btc/",
+    "ETH": "https://farside.co.uk/eth/"
 }
 
-PROVIDER_MAPPING = {
-    "IBIT": "BlackRock",
-    "FBTC": "Fidelity",
-    "BITB": "Bitwise",
-    "ARKB": "Ark",
-    "GBTC": "Grayscale",
-    "ETHE": "Grayscale",
-    "HODL": "VanEck",
-    "BTCO": "Invesco",
-    "EZBC": "Franklin",
-    "BRRR": "Valkyrie",
-}
+PROVIDERS = ["BlackRock", "Fidelity", "Grayscale"]
 
-def get_coin_from_symbol(symbol: str) -> str:
-    if symbol.endswith("E") or symbol.startswith("ETH"):
-        return "ETH"
-    return "BTC"
-
-async def get_etf_flow_report():
-    today = datetime.datetime.utcnow().strftime("%Y-%m-%d")
-    report_lines = [f"📊 Spot ETF Net Akış 2Raporu ({today})\n"]
-
+def interpret_trend(today, yesterday):
     try:
-        async with aiohttp.ClientSession() as session:
-            async with session.get(COINGLASS_API, headers=HEADERS) as resp:
-                if resp.status != 200:
-                    return f"❌ Coinglass API durumu: {resp.status}"
-                text_data = await resp.text()
-                if not text_data.strip():
-                    return "❌ Coinglass boş içerik döndürdü (IP engeli veya koruma olabilir)"
-                try:
-                    data = json.loads(text_data)
-                except json.JSONDecodeError as je:
-                    return f"❌ JSON ayrıştırma hatası: {je}.\nYanıt: {text_data[:200]}"
-    except Exception as e:
-        return f"❌ Coinglass verisi alınamadı: {e}"
+        today = float(today)
+        yesterday = float(yesterday)
+    except:
+        return "Trend belirlenemedi ❓"
 
-    try:
-        etf_list = data["data"]["etfList"]
-    except Exception:
-        return "❌ Veri yapısı çözümlenemedi"
+    if today > 0 and yesterday > 0:
+        if today > yesterday:
+            return "Düne göre artış 📈"
+        elif today < yesterday:
+            return "Düne göre azalış ↘️"
+        else:
+            return "Aynı seviye ➖"
+    elif today < 0 and yesterday < 0:
+        if today < yesterday:
+            return "Çıkış artışı 🔻"
+        elif today > yesterday:
+            return "Çıkış azaldı ↗️"
+        else:
+            return "Aynı seviye ➖"
+    elif today > 0 and yesterday < 0:
+        return "Pozitife döndü 🟢"
+    elif today < 0 and yesterday > 0:
+        return "Negatife döndü 🔴"
+    else:
+        return "Trend belirlenemedi ❓"
 
-    coin_data = {"BTC": [], "ETH": []}
+async def fetch_coin_etf_data(coin):
+    url = FARSIDE_URLS[coin]
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url) as response:
+            if response.status != 200:
+                raise Exception(f"{coin} için Farside verisi alınamadı.")
+            html = await response.text()
 
-    for item in etf_list:
-        symbol = item.get("symbol", "")
-        flow_str = item.get("lastNetInflow", "")
-        try:
-            flow = float(flow_str)
-        except:
-            continue
+    soup = BeautifulSoup(html, "html.parser")
+    table = soup.find("table")
+    if not table:
+        raise Exception(f"{coin} için tablo bulunamadı.")
 
-        coin = get_coin_from_symbol(symbol)
-        provider = PROVIDER_MAPPING.get(symbol, symbol)
-        coin_data[coin].append((provider, flow))
+    rows = table.find_all("tr")[1:]
+    if len(rows) < 2:
+        raise Exception(f"{coin} için yeterli geçmiş veri yok.")
 
-    for coin, flows in coin_data.items():
-        if not flows:
-            report_lines.append(f"• {coin}: Veri yok\n")
-            continue
+    today_row = [td.text.strip().replace("$", "") for td in rows[0].find_all("td")]
+    yesterday_row = [td.text.strip().replace("$", "") for td in rows[1].find_all("td")]
 
-        total = sum([f for _, f in flows])
-        emoji = "🟢" if total >= 0 else "🔴"
-        flow_lines = [f"{p}: {'+' if f >= 0 else ''}${f:.2f}M" for p, f in flows]
-        report_lines.append(f"• {coin}: {'+' if total >= 0 else ''}${total:.2f}M {emoji}\n  ({', '.join(flow_lines)})")
+    date = today_row[0]
+    today_values = today_row[1:]  # Provider1, Provider2, ..., Total
+    yesterday_values = yesterday_row[1:]
 
-    return "\n".join(report_lines)
+    if len(today_values) != len(PROVIDERS) + 1:
+        raise Exception(f"{coin} veri formatı beklenen gibi değil.")
+
+    provider_today = list(map(lambda v: float(v.replace(",", "")), today_values[:-1]))
+    provider_yesterday = list(map(lambda v: float(v.replace(",", "")), yesterday_values[:-1]))
+
+    total_today = float(today_values[-1].replace(",", ""))
+    total_yesterday = float(yesterday_values[-1].replace(",", ""))
+
+    trend = interpret_trend(total_today, total_yesterday)
+    emoji = "🟢" if total_today >= 0 else "🔴"
+    total_str = f"{'+' if total_today >= 0 else ''}${total_today:.2f} M$"
+
+    provider_lines = []
+    for name, val in zip(PROVIDERS, provider_today):
+        p_str = f"{'+' if val >= 0 else ''}${val:.2f} M$"
+        provider_lines.append(f"  {name}: {p_str}")
+
+    coin_report = f"• {coin}: {total_str} {emoji}   ({trend})\n" + "\n".join(provider_lines)
+    return date, coin_report
+
+async def get_full_etf_report():
+    btc_date, btc_report = await fetch_coin_etf_data("BTC")
+    eth_date, eth_report = await fetch_coin_etf_data("ETH")
+
+    # En güncel tarihi üstte göstermek için
+    report_date = btc_date if btc_date >= eth_date else eth_date
+    return f"📊 Spot ETF Net Akış Raporu ({report_date})\n\n{btc_report}\n\n{eth_report}"
+    
