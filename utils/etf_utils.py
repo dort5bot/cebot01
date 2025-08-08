@@ -1,14 +1,14 @@
-# utils/etf_utils.py farisi
-
+# utils/etf_utils.py2
 import aiohttp
 from bs4 import BeautifulSoup
 
 FARSIDE_URLS = {
-    "BTC": "https://farside.co.uk/btc/",
-    "ETH": "https://farside.co.uk/eth/"
+    "BTC": "https://farside.co.uk/bitcoin-etf-flow-all-data/",
+    "ETH": "https://farside.co.uk/ethereum-etf-flow-all-data/"
 }
 
 PROVIDERS = ["BlackRock", "Fidelity", "Grayscale"]
+
 
 def interpret_trend(today, yesterday):
     try:
@@ -38,16 +38,13 @@ def interpret_trend(today, yesterday):
     else:
         return "Trend belirlenemedi ❓"
 
+
 async def fetch_coin_etf_data(coin):
     url = FARSIDE_URLS[coin]
-    headers = {
-        "User-Agent": "Mozilla/5.0"
-    }
-
     async with aiohttp.ClientSession() as session:
-        async with session.get(url, headers=headers) as response:
+        async with session.get(url) as response:
             if response.status != 200:
-                raise Exception(f"{coin} için 2❗Farside verisi alınamadı.")
+                raise Exception(f"{coin} için Farside verisi alınamadı.")
             html = await response.text()
 
     soup = BeautifulSoup(html, "html.parser")
@@ -55,7 +52,7 @@ async def fetch_coin_etf_data(coin):
     if not table:
         raise Exception(f"{coin} için tablo bulunamadı.")
 
-    rows = table.find_all("tr")[1:]
+    rows = table.find_all("tr")[1:]  # header hariç
     if len(rows) < 2:
         raise Exception(f"{coin} için yeterli geçmiş veri yok.")
 
@@ -63,7 +60,7 @@ async def fetch_coin_etf_data(coin):
     yesterday_row = [td.text.strip().replace("$", "") for td in rows[1].find_all("td")]
 
     date = today_row[0]
-    today_values = today_row[1:]
+    today_values = today_row[1:]  # Provider1, Provider2, ..., Total
     yesterday_values = yesterday_row[1:]
 
     if len(today_values) != len(PROVIDERS) + 1:
@@ -84,15 +81,15 @@ async def fetch_coin_etf_data(coin):
         p_str = f"{'+' if val >= 0 else ''}${val:.2f} M$"
         provider_lines.append(f"  {name}: {p_str}")
 
-    coin_report = f"• {coin}: {total_str} {emoji}   ({trend})\n" + "\n".join(provider_lines)
+    coin_report = f"\u2022 {coin}: {total_str} {emoji}   ({trend})\n" + "\n".join(provider_lines)
     return date, coin_report
+
 
 async def get_full_etf_report():
     btc_date, btc_report = await fetch_coin_etf_data("BTC")
     eth_date, eth_report = await fetch_coin_etf_data("ETH")
 
-    # En güncel tarihi üstte göstermek için
+    # En güncel tarihi göster
     report_date = btc_date if btc_date >= eth_date else eth_date
     return f"📊 Spot ETF Net Akış Raporu ({report_date})\n\n{btc_report}\n\n{eth_report}"
-        
-
+    
