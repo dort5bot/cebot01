@@ -1,11 +1,11 @@
 # == ✅ MegaBot Final - utils/ap_utils.py ==
 # Teknik analiz yardımcı fonksiyonlar
 
+
+from .binance_api import get_price, get_klines
 import numpy as np
-from .binance_api import get_klines
 
 def calculate_rsi(prices, period=14):
-    """RSI hesaplama"""
     if len(prices) < period + 1:
         return None
     deltas = np.diff(prices)
@@ -34,7 +34,6 @@ def detect_volume_spike(volumes):
     return "yüksek" if volumes[-1] > 1.5 * avg_vol else "normal"
 
 def generate_ap_report(symbol="BTCUSDT", interval="1h"):
-    """Teknik analiz raporu oluşturur"""
     try:
         klines = get_klines(symbol, interval=interval, limit=100)
         closes = [float(k[4]) for k in klines]
