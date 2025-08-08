@@ -1,10 +1,9 @@
-###yeni utils/ap_calc.py → 3 metrikli piyasa analizi
-###
+# == ✅ MegaBot Final - utils/ap_calc.py ==
+# Altcoin Güç Skorları Hesaplama
 
-
+import statistics
 from utils.io_utils import get_all_symbols, get_volume_share, get_recent_cash_flow, get_mts_score, get_io_ratio
 from utils.binance_api import get_price_change
-import statistics
 
 def normalize(value, min_val=-1, max_val=1):
     """Veriyi 0-100 arası normalize eder."""
