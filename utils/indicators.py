@@ -1,4 +1,5 @@
 # utils/indicators.py
+#kimle ilgilidir not almamışım 
 
 import numpy as np
 
