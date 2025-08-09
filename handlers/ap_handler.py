@@ -1,26 +1,25 @@
-# == ✅ MegaBot Final - handlers/ap_handler.py ==
-# /ap komutu - Gelişmiş Altcoin Güç Endeksi
+##ap komutu
+# handlers/ap_handler.py
+from telegram import Update
+from telegram.ext import ContextTypes
+from utils.ap_utils import compute_ap_full
 
-from utils.ap_calc import alt_vs_btc_strength, alt_usdt_strength, long_term_strength
-from utils.ap_utils import generate_ap_report
-
-def ap_command(update, context):
-    chat_id = update.effective_chat.id
+async def ap_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    msg = await update.effective_message.reply_text("AP hesaplanıyor... (binance + coinglass)")
     try:
-        btc_report = generate_ap_report("BTCUSDT")
-        eth_report = generate_ap_report("ETHUSDT")
-
-        msg = "📊 **Altcoin Güç Endeksi**\n"
-        msg += f"\n🔹 **Alt vs BTC Gücü:** {alt_vs_btc_strength()} / 100"
-        msg += f"\n🔹 **Alt vs USDT Gücü:** {alt_usdt_strength()} / 100"
-        msg += f"\n🔹 **Uzun Vadeli Güç:** {long_term_strength()} / 100"
-
-        msg += "\n\n📈 **BTC Teknik Analizi**"
-        msg += f"\nFiyat: {btc_report['price']} | RSI: {btc_report['rsi']} | Trend: {btc_report['trend']} | Momentum: {btc_report['momentum']} | Hacim: {btc_report['volume']} | Tavsiye: {btc_report['recommendation']}"
-
-        msg += "\n\n📈 **ETH Teknik Analizi**"
-        msg += f"\nFiyat: {eth_report['price']} | RSI: {eth_report['rsi']} | Trend: {eth_report['trend']} | Momentum: {eth_report['momentum']} | Hacim: {eth_report['volume']} | Tavsiye: {eth_report['recommendation']}"
-
-        context.bot.send_message(chat_id=chat_id, text=msg, parse_mode="Markdown")
+        report = compute_ap_full()
     except Exception as e:
-        context.bot.send_message(chat_id=chat_id, text=f"❌ Hata: {str(e)}")
+        await msg.edit_text(f"AP hesaplanırken hata: {e}")
+        return
+
+    agg = report["ap_aggregate"]
+    emoji = "🟢" if agg >= 60 else ("🟡" if agg >= 40 else "🔴")
+    text = (
+        f"📊 /ap — Altların Güç Endeksi\n\n"
+        f"🔹 Kısa v. BTC gücü: {report['short_vs_btc']} \n"
+        f"🔹 Kısa v. USD gücü: {report['short_usd']} \n"
+        f"🔹 Uzun v. güç: {report['long_term']} \n\n"
+        f"⭐ AP (aggregate): {agg} {emoji}\n\n"
+        f"Meta: sembol sayısı: {report['meta']['symbols_used']}"
+    )
+    await msg.edit_text(text)
